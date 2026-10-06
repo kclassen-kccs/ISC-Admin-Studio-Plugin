@@ -1,82 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import {
   getIdentitiesCount, getSourcesCount, getRolesCount,
   getRoleStatsSummary, listMyReports, getSchemaAnalysis, NO_ACCESS,
-  getApiUsageCount, getBranding, fetchBrandingLogoObjectUrl,
 } from "../lib/sailpoint";
 import { useAuth } from "../hooks/useAuth";
 import { TopBar } from "../components/TopBar";
-import { MetricCard, SectionLabel, Spinner } from "../components/ui";
+import { MetricCard, SectionLabel } from "../components/ui";
 import toast from "react-hot-toast";
 import { tenantUiHost } from "../lib/tenantHost";
-
-// "cloudLifecycleState" -> "cloud lifecycle state", for naming the attribute
-// a brand was matched on.
-const humanizeKey = (k) =>
-  String(k || "")
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/[_-]+/g, " ")
-    .toLowerCase()
-    .trim();
-
-// The tenant's branding, shaped like a MetricCard so the row reads evenly.
-// The logo arrives as a blob object URL (see fetchBrandingLogoObjectUrl) and
-// is revoked on unmount; if it can't be loaded the card still shows the name
-// rather than an empty box or a broken image.
-function BrandingCard({ branding, loading }) {
-  const [logo, setLogo] = useState(null);
-  const wantsLogo = branding?.available && branding?.logoAvailable;
-
-  useEffect(() => {
-    if (!wantsLogo) return undefined;
-    let url = null;
-    let cancelled = false;
-    fetchBrandingLogoObjectUrl()
-      .then((u) => {
-        url = u;
-        if (cancelled) URL.revokeObjectURL(u);
-        else setLogo(u);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [wantsLogo]);
-
-  const name = branding?.productName || branding?.name || null;
-  return (
-    <div className="bg-gray-50 rounded-xl p-4 text-left w-full">
-      <p className="text-xs text-gray-500 mb-1">Branding</p>
-      {loading ? (
-        <Spinner size={20} />
-      ) : (
-        <>
-          <div className="flex items-center h-9">
-            {logo ? (
-              <img src={logo} alt={name ? `${name} logo` : "Tenant branding logo"} className="max-h-9 max-w-full object-contain" />
-            ) : (
-              <p className="text-xl font-semibold text-gray-900 truncate">{name || "—"}</p>
-            )}
-          </div>
-          <p className="text-xs text-gray-400 mt-1 truncate">
-            {!branding?.available
-              ? "Not configured"
-              : branding.matchedAttribute
-                // The brand this user's own attribute selected.
-                ? `Your brand · ${humanizeKey(branding.matchedAttribute)} ${branding.matchedValue}`
-                : logo
-                  ? name || "Tenant default"
-                  : branding.isDefault ? "Tenant default" : name || "Tenant branding"}
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
 
 export default function HomePage() {
   const { session } = useAuth();
@@ -88,8 +22,6 @@ export default function HomePage() {
   const roles = useQuery({ queryKey: ["roles-count"], queryFn: getRolesCount });
   const roleStats = useQuery({ queryKey: ["role-stats-summary"], queryFn: getRoleStatsSummary });
   const myReports = useQuery({ queryKey: ["my-reports"], queryFn: listMyReports });
-  const apiUsage = useQuery({ queryKey: ["api-usage-30d"], queryFn: () => getApiUsageCount({ days: 30 }) });
-  const branding = useQuery({ queryKey: ["branding"], queryFn: getBranding });
 
   // A tenant that has never run Schema Analysis has no mining attributes
   // yet, so the first person to sign in lands on that screen to pick them
@@ -107,7 +39,7 @@ export default function HomePage() {
 
   function refresh() {
     ids.refetch(); srcs.refetch(); roles.refetch();
-    roleStats.refetch(); myReports.refetch(); apiUsage.refetch(); branding.refetch();
+    roleStats.refetch(); myReports.refetch();
     toast.success("Dashboard refreshed");
   }
 
@@ -134,31 +66,6 @@ export default function HomePage() {
       <div className="flex-1 overflow-y-auto pb-24">
         {/* Metrics */}
         <SectionLabel>At a glance</SectionLabel>
-        {/* Tenant-level row: API traffic and whose branding this tenant wears. */}
-        <div className="grid grid-cols-2 gap-3 px-4 mb-3">
-          <MetricCard
-            label="API Requests"
-            value={
-              apiUsage.isLoading
-                ? undefined
-                : typeof apiUsage.data?.count === "number"
-                  ? apiUsage.data.count.toLocaleString()
-                  : "—"
-            }
-            sub={
-              apiUsage.data?.unavailable
-                ? (apiUsage.data.reason === "no-access"
-                    ? "No access for this account"
-                    : apiUsage.data.reason === "not-enabled"
-                      ? "Not available on this tenant"
-                      : "Unavailable")
-                : apiUsage.data?.unrecognized
-                  ? "Unexpected response from ISC"
-                  : "Last 30 days"
-            }
-          />
-          <BrandingCard branding={branding.data} loading={branding.isLoading} />
-        </div>
         <div className="grid grid-cols-2 gap-3 px-4">
           <MetricCard
             label="Identities"
