@@ -27,28 +27,33 @@ function readableOn(hex) {
 
 // The app's name plate, across the top of Home. Plain display, not a link:
 // the App Shell already signed the user in and scoped the token, so there is
-// no auth state to signal. The blue family is repointed to the tenant's own
-// ISC brand colours (see index.css), so it always matches the console.
+// no auth state to signal. It wears the tenant's own instance badge colour
+// from ISC's branding page (with black or white text, whichever reads on
+// it); a tenant with no badge gets the tenant's ISC brand blue instead
+// (see index.css).
 function AdminStudioBanner({ session, badge }) {
+  const badgeColor = badge?.color || null;
+  const fg = badgeColor ? readableOn(badgeColor) : undefined;
+  const subtitle = badge?.name || session?.siteName || session?.tenant || null;
   return (
-    <div className="mx-4 mt-4 mb-2 flex items-center justify-center gap-4 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-4">
-      <ShieldCheck size={40} strokeWidth={2} className="text-blue-600 flex-shrink-0" />
+    <div
+      className={`mx-4 mt-4 mb-2 flex items-center justify-center gap-4 rounded-2xl border px-6 py-4 ${
+        badgeColor ? "" : "border-blue-200 bg-blue-50"
+      }`}
+      style={badgeColor ? { backgroundColor: badgeColor, borderColor: badgeColor, color: fg } : undefined}
+    >
+      <ShieldCheck size={40} strokeWidth={2} className={badgeColor ? "flex-shrink-0" : "text-blue-600 flex-shrink-0"} />
       <div className="flex flex-col items-center min-w-0">
-        <span className="text-2xl md:text-3xl font-bold leading-tight text-blue-700 tracking-tight">Admin Studio</span>
-        {badge ? (
+        <span className={`text-2xl md:text-3xl font-bold leading-tight tracking-tight ${badgeColor ? "" : "text-blue-700"}`}>
+          Admin Studio
+        </span>
+        {subtitle && (
           <span
-            className="text-xs leading-tight truncate font-medium px-2 py-0.5 rounded mt-1 max-w-full"
-            style={badge.color ? { backgroundColor: badge.color, color: readableOn(badge.color) } : undefined}
-            title={`Instance badge — ${badge.name}`}
+            className={`text-sm leading-tight truncate mt-0.5 opacity-80 ${badgeColor ? "" : "text-blue-700"}`}
+            title={badge ? `Instance badge — ${badge.name}` : undefined}
           >
-            {badge.name}
+            {subtitle}
           </span>
-        ) : (
-          (session?.siteName || session?.tenant) && (
-            <span className="text-sm leading-tight truncate text-blue-700 opacity-70 mt-0.5">
-              {session.siteName || session.tenant}
-            </span>
-          )
         )}
       </div>
     </div>
