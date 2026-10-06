@@ -21,7 +21,8 @@
      "lockfile:normalize": "node scripts/lockfile.mjs",
     "lockfile:verify": "node scripts/lockfile.mjs --verify",
    "start": "craco start",
-    "build": "craco build"
+    "build": "craco build",
+    "test": "craco test"
   },
   "browserslist": {
     "production": [
