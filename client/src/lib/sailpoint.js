@@ -1429,8 +1429,12 @@ async function getCountOrNoAccess(path, params) {
   }
 }
 
+// /identities, not /public-identities: the latter counts every account-level
+// record the search index holds (over 15k on a tenant with 354 identities),
+// while /identities is the tenant's identities and leaves out SailPoint's own
+// slpt.* service identities that even the search index includes.
 export async function getIdentitiesCount() {
-  return getCountOrNoAccess("/public-identities");
+  return getCountOrNoAccess("/identities");
 }
 
 export async function getSourcesCount() {
