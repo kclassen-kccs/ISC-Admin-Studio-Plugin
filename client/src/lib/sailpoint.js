@@ -47,6 +47,8 @@ import * as PortedRoleScans from "./ported/roleScans";
 import * as PortedSchemaAnalysis from "./ported/schemaAnalysis";
 import * as PortedRoleStats from "./ported/roleStats";
 import * as PortedSegmentRoleMatches from "./ported/segmentRoleMatches";
+import * as PortedSegmentScans from "./ported/segmentScans";
+import * as PortedAccessSegmentScans from "./ported/accessSegmentScans";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -2273,31 +2275,23 @@ export async function getServerVersion() {
 }
 
 export async function startSegmentScan({ includeRoles = true, includeEntitlements = true, mode } = {}) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-scans`,
-    { includeRoles, includeEntitlements, mode },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedSegmentScans.startSegmentScan({ includeRoles, includeEntitlements, mode }); // { scanId }
 }
 
 export async function listSegmentScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.listSegmentScans();
 }
 
 export async function getSegmentScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.getSegmentScan(scanId);
 }
 
 export async function cancelSegmentScan(scanId) {
-  const resp = await axios.post(`${API_BASE}/api/insights/segment-scans/${scanId}/cancel`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.cancelSegmentScan(scanId);
 }
 
 export async function deleteSegmentScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/segment-scans/${scanId}`, { headers: authHeaders() });
+  await PortedSegmentScans.deleteSegmentScan(scanId);
 }
 
 // Live progress of a create run — { done, total }, zeroes when nothing is
@@ -2305,8 +2299,7 @@ export async function deleteSegmentScan(scanId) {
 // and ISC rate-limits that hard, so a run can take minutes; this is what the
 // drafts screen counts off against.
 export async function getSegmentCreateProgress(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-scans/${scanId}/create-progress`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.getSegmentCreateProgress(scanId);
 }
 
 // ─── Parameter Storage (Browse > Parameters) ────────────────────────────────
@@ -2548,61 +2541,43 @@ export async function listIscSegmentItems(type, segmentId) {
 }
 
 // ─── Segments mining (ISC access-request Segments, not Data Segments) ──────
-const ACCESS_SEGMENT_SCANS = "/api/insights/access-segment-scans";
-
+// Ported to ported/accessSegmentScans.js — the scan runs in the page.
 export async function startAccessSegmentScan() {
-  const resp = await axios.post(`${API_BASE}${ACCESS_SEGMENT_SCANS}`, {}, { headers: authHeaders() });
-  return resp.data; // { scanId }
+  return PortedAccessSegmentScans.startAccessSegmentScan(); // { scanId }
 }
 export async function listAccessSegmentScans() {
-  const resp = await axios.get(`${API_BASE}${ACCESS_SEGMENT_SCANS}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.listAccessSegmentScans();
 }
 export async function getAccessSegmentScan(scanId) {
-  const resp = await axios.get(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.getAccessSegmentScan(scanId);
 }
 export async function cancelAccessSegmentScan(scanId) {
-  const resp = await axios.post(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}/cancel`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.cancelAccessSegmentScan(scanId);
 }
 export async function deleteAccessSegmentScan(scanId) {
-  await axios.delete(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}`, { headers: authHeaders() });
+  await PortedAccessSegmentScans.deleteAccessSegmentScan(scanId);
 }
 export async function getAccessSegmentCreateProgress(scanId) {
-  const resp = await axios.get(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}/create-progress`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.getAccessSegmentCreateProgress(scanId);
 }
 // Creates each chosen Segment in ISC (or uses the existing one of the same
 // name) and assigns its roles, access profiles and entitlements.
 export async function createAccessSegmentsFromScan(scanId, suggestionIds, { activate = true } = {}) {
-  const resp = await axios.post(
-    `${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}/create`,
-    { suggestionIds, activate },
-    { headers: authHeaders(), timeout: 0 }
-  );
-  return resp.data; // { results: [{ id, ok, merged, segmentId, segmentName, assigned, error }] }
+  // { results: [{ id, ok, merged, segmentId, segmentName, assigned, error }] }
+  return PortedAccessSegmentScans.createAccessSegmentsFromScan(scanId, suggestionIds, { activate });
 }
 
 export async function createSegmentsFromScan(scanId, suggestionIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-scans/${scanId}/create`,
-    { suggestionIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  return PortedSegmentScans.createSegmentsFromScan(scanId, suggestionIds);
 }
 
 // For a suggestion whose name already matches a real segment (nothing was
 // created for it), merges its suggested roles/entitlements into that
 // EXISTING segment's own Access Model instead.
 export async function addScanSuggestionsToExistingSegments(scanId, suggestionIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-scans/${scanId}/add-to-existing`,
-    { suggestionIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  return PortedSegmentScans.addScanSuggestionsToExistingSegments(scanId, suggestionIds);
 }
 
 // Runs a full SP-Config export (server polls the async job to completion —
