@@ -33,6 +33,11 @@ import * as PortedTenantInfo from "./ported/tenantInfo";
 import * as PortedEntitlements from "./ported/entitlements";
 import * as PortedAccessProfiles from "./ported/accessProfiles";
 import * as PortedMetadata from "./ported/metadataTagging";
+import * as PortedWorkflows from "./ported/workflows";
+import * as PortedJsonEdit from "./ported/jsonEdit";
+import * as PortedReports from "./ported/reports";
+import * as PortedCampaignReports from "./ported/campaignReports";
+import * as PortedSpConfig from "./ported/spConfig";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -802,28 +807,24 @@ export async function getIdentityEmail(id) {
 // Roles list's Email Report action instead of an attachment, since
 // mailto: links can't carry one.
 export async function createRoleReport({ filename, pdfBase64 }) {
-  const resp = await axios.post(`${API_BASE}/api/role-reports`, { filename, pdfBase64 }, { headers: authHeaders() });
-  return resp.data;
+  return PortedReports.createRoleReport({ filename, pdfBase64 });
 }
 
 // Saves a private, per-user copy of a generated PDF — shown on the
 // signed-in user's own "My Reports" list (see server's POST /api/reports).
 export async function saveReport({ filename, title, pdfBase64 }) {
-  const resp = await axios.post(`${API_BASE}/api/reports`, { filename, title, pdfBase64 }, { headers: authHeaders() });
-  return resp.data;
+  return PortedReports.saveReport({ filename, title, pdfBase64 });
 }
 
 export async function listMyReports() {
-  const resp = await axios.get(`${API_BASE}/api/reports`, { headers: authHeaders() });
-  return resp.data;
+  return PortedReports.listMyReports();
 }
 
 // Fetched as a blob rather than opened by bare URL — the route requires
 // the x-sp-session header, which a plain <a href>/window.open(url) can't
 // send (unlike the public role-reports links, which need no auth).
 export async function getReportBlob(id) {
-  const resp = await axios.get(`${API_BASE}/api/reports/${id}`, { headers: authHeaders(), responseType: "blob" });
-  return resp.data;
+  return PortedReports.getReportBlob(id);
 }
 
 // Creates and activates one ROLE_COMPOSITION certification campaign per
@@ -2240,12 +2241,7 @@ export async function runCampaignReport(id, reportType) {
 // { zip?: { name, contentBase64 }, files: [...], failures: [{ campaign, reportType, error }] }.
 // consolidate (CSV only) merges every campaign into one file per report type.
 export async function downloadCampaignReports({ campaignIds, reportTypes, format, zip = true, consolidate = false }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/campaigns/reports/download`,
-    { campaignIds, reportTypes, format, zip, consolidate },
-    { headers: authHeaders(), timeout: 0 }
-  );
-  return resp.data;
+  return PortedCampaignReports.downloadCampaignReports({ campaignIds, reportTypes, format, zip, consolidate });
 }
 
 // The individual reviewer certifications generated for one campaign.
@@ -2678,12 +2674,7 @@ export async function addScanSuggestionsToExistingSegments(scanId, suggestionIds
 // JSON plus a suggested filename. Can take a while for a large tenant, hence
 // the generous timeout override on top of the shared axios instance's default.
 export async function backupSpConfig() {
-  const resp = await axios.post(
-    `${API_BASE}/api/sp-config/backup`,
-    {},
-    { headers: authHeaders(), timeout: 150000 }
-  );
-  return resp.data; // { filename, data }
+  return PortedSpConfig.backupSpConfig(); // { filename, data }
 }
 
 // Imports a selected subset of a previously exported sp-config JSON — see
@@ -2691,12 +2682,7 @@ export async function backupSpConfig() {
 // the original export (e.g. { objects: [...] }), just narrowed to whatever
 // the user selected in the Restore screen's JSON browser.
 export async function restoreSpConfig(data) {
-  const resp = await axios.post(
-    `${API_BASE}/api/sp-config/restore`,
-    { data },
-    { headers: authHeaders(), timeout: 150000 }
-  );
-  return resp.data; // { result }
+  return PortedSpConfig.restoreSpConfig(data); // { result, details }
 }
 
 // Writes the recommended mappings back to ISC — every source in the scan
@@ -2856,8 +2842,7 @@ export async function createWorkflowFromOutline({ requirements, outline }) {
 // touches nothing in ISC (which has no validate call: it only validates when
 // a workflow is ENABLED). { state: "OK" | "ERROR", problems: [] }.
 export async function validateWorkflowDraft(payload) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/validate`, payload, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflows.validateWorkflowDraft(payload);
 }
 
 // Proposes a modified version of a workflow from a plain-language change —
@@ -2875,14 +2860,13 @@ export async function proposeWorkflowModification(id, { instructions, proposal, 
 // Deletes a workflow. ISC won't delete an enabled one, so the server disables
 // it first (and re-enables it if the delete then fails).
 export async function deleteWorkflow(id) {
-  await axios.delete(`${API_BASE}/api/workflows/${id}`, { headers: authHeaders() });
+  await PortedWorkflows.deleteWorkflow(id);
 }
 
 // Turns a workflow on or off; resolves the updated workflow. ISC validates
 // on enable and refuses an incomplete workflow with its own message.
 export async function setWorkflowEnabled(id, enabled) {
-  const resp = await axios.put(`${API_BASE}/api/workflows/${id}/enabled`, { enabled }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflows.setWorkflowEnabled(id, enabled);
 }
 
 // A workflow's runs, newest first as ISC returns them — kept for 90 days.
@@ -2906,8 +2890,7 @@ export async function getWorkflowExecutionHistory(executionId) {
 // comes back 409 { code: "WORKFLOW_ENABLED" }. Resolves
 // { workflow, wasDisabledToSave, reenabled, reenableError? }.
 export async function updateWorkflow(id, body, { allowDisable = false } = {}) {
-  const resp = await axios.put(`${API_BASE}/api/workflows/${id}/save`, { workflow: body, allowDisable }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflows.updateWorkflow(id, body, { allowDisable });
 }
 
 // Raw-JSON tab saves — RFC 6902 ops go through a dedicated server route
@@ -2916,8 +2899,7 @@ export async function updateWorkflow(id, body, { allowDisable = false } = {}) {
 // need the revert-to-draft flow. resource ∈ roles | entitlements |
 // access-profiles | source-apps | sources | data-segments.
 export async function patchObjectJson(resource, id, ops) {
-  const resp = await axios.patch(`${API_BASE}/api/json-edit/${resource}/${id}`, { ops }, { headers: authHeaders() });
-  return resp.data;
+  return PortedJsonEdit.patchObjectJson(resource, id, ops);
 }
 
 // { svg } — Claude renders the workflow's step graph as a flowchart SVG
