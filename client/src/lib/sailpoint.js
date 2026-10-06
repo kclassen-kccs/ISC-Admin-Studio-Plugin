@@ -44,6 +44,9 @@ import * as PortedSkeletonScans from "./ported/skeletonScans";
 import * as PortedDlScans from "./ported/dlScans";
 import * as PortedAttributeSyncScans from "./ported/attributeSyncScans";
 import * as PortedRoleScans from "./ported/roleScans";
+import * as PortedSchemaAnalysis from "./ported/schemaAnalysis";
+import * as PortedRoleStats from "./ported/roleStats";
+import * as PortedSegmentRoleMatches from "./ported/segmentRoleMatches";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -905,22 +908,15 @@ export async function removeRoleSodMitigation(roleId, mitigationId) {
 // Tenant-wide mitigation list/edit/delete — backs Evaluation Config's
 // "Manage Mitigations" screen, not scoped to one role's evaluation sheet.
 export async function listTenantSodMitigations() {
-  const resp = await axios.get(`${API_BASE}/api/insights/sod-mitigations`, { headers: authHeaders() });
-  return sortByName(resp.data, ["roleName", "policyName"]);
+  return sortByName(await PortedRoleEvaluation.listTenantSodMitigations(), ["roleName", "policyName"]);
 }
 
 export async function updateSodMitigation(mitigationId, { expiresAt }) {
-  const resp = await axios.patch(
-    `${API_BASE}/api/insights/sod-mitigations/${mitigationId}`,
-    { expiresAt },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvaluation.updateSodMitigation(mitigationId, { expiresAt });
 }
 
 export async function deleteSodMitigation(mitigationId) {
-  const resp = await axios.delete(`${API_BASE}/api/insights/sod-mitigations/${mitigationId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleEvaluation.deleteSodMitigation(mitigationId); // { ok: true }
 }
 
 // { commonAccess: boolean, status: "CONFIRMED" | "DENIED" | null }
@@ -1132,16 +1128,14 @@ export async function setUserPreferences(preferences) {
 // Runs the Role Statistics Refresh job immediately, as the signed-in user —
 // counts toward the Home screen's stats the same as a real scheduled run.
 export async function runRoleStatsRefreshNow() {
-  const resp = await axios.post(`${API_BASE}/api/insights/role-stats-refresh/run-now`, {}, { headers: authHeaders() });
-  return resp.data; // { scanId }
+  return PortedRoleStats.runRoleStatsRefreshNow(); // { scanId }
 }
 
 // The Home screen's pass/needs-update role counts, from the most recent
 // completed Role Statistics Refresh scan — { available: false } if none has
 // ever run.
 export async function getRoleStatsSummary() {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-stats-summary`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleStats.getRoleStatsSummary();
 }
 
 // Runs a raw ISC Search query (identities index) and returns how many
@@ -1458,33 +1452,22 @@ export async function listSodViolations({ limit = 20 } = {}) {
 
 // ─── Configuration: schema analysis ────────────────────────────────────────────
 
-// Not an ISC passthrough — hits the server's own analysis endpoint directly.
-// Runs fresh and persists (and returns) the result for the current tenant.
+// Not an ISC passthrough — runs the analysis in the browser (ported from the
+// server). Runs fresh and persists (and returns) the result for the current tenant.
 export async function runSchemaAnalysis() {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/schema-analysis`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSchemaAnalysis.runSchemaAnalysis();
 }
 
 // The persisted result for the current tenant, or null if none has run yet.
 export async function getSchemaAnalysis() {
-  const resp = await axios.get(`${API_BASE}/api/insights/schema-analysis`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSchemaAnalysis.getSchemaAnalysis();
 }
 
-// Overrides the algorithm's top-3 pick with a manually chosen, ordered list
-// (first = highest priority). 1 to 3 keys, each must be one of this
+// Overrides the algorithm's top pick with a manually chosen, ordered list
+// (first = highest priority). 1 to 2 keys, each must be one of this
 // analysis's candidates.
 export async function setSchemaTopAttributes(topAttributes) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/schema-analysis/top-attributes`,
-    { topAttributes },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSchemaAnalysis.setSchemaTopAttributes(topAttributes);
 }
 
 // Persists the Multi-Company/Division Boundary — whether it's on, and
@@ -1492,12 +1475,7 @@ export async function setSchemaTopAttributes(topAttributes) {
 // sibling toggle (only meaningful, and only ever persisted true, while
 // enabled is also true) that also gates the Data Segments menu.
 export async function setSchemaRoleBoundary({ enabled, attributes, createDataSegments }) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/schema-analysis/role-boundary`,
-    { enabled, attributes, createDataSegments },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSchemaAnalysis.setSchemaRoleBoundary({ enabled, attributes, createDataSegments });
 }
 
 // ─── Data Segments ──────────────────────────────────────────────────────────
@@ -1578,28 +1556,17 @@ export async function publishSegments(ids) {
 // writing anything. Poll getSegmentRoleMatch for progress/results — each
 // result carries `matches` (roles) and `entitlementMatches`.
 export async function startSegmentRoleMatch(segmentIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-role-matches`,
-    { segmentIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { matchId }
+  return PortedSegmentRoleMatches.startSegmentRoleMatch(segmentIds); // { matchId }
 }
 
 export async function getSegmentRoleMatch(matchId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-role-matches/${matchId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentRoleMatches.getSegmentRoleMatch(matchId);
 }
 
 // items: [{ segmentId, type: "ROLE" | "ENTITLEMENT", id }, ...] — assigns
 // each accepted suggestion. type defaults to ROLE if omitted.
 export async function assignSegmentRoleMatches(matchId, items) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-role-matches/${matchId}/assign`,
-    { items },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results }
+  return PortedSegmentRoleMatches.assignSegmentRoleMatches(matchId, items); // { results }
 }
 
 // ─── Role Insight: peer groups ────────────────────────────────────────────────

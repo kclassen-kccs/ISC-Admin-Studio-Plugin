@@ -923,6 +923,51 @@ export async function removeRoleSodMitigation(roleId, mitigationId) {
   }
 }
 
+// ─── Tenant-wide mitigation management (Evaluation Config > Manage Mitigations)
+
+/**
+ * GET /api/insights/sod-mitigations
+ * Every mitigation on record for this tenant, across every role, soonest
+ * expiry first. Not filtered to active-only: the client shows expiresAt for
+ * every row so an already-expired one is still visible (and still deletable)
+ * rather than silently vanishing.
+ */
+export async function listTenantSodMitigations() {
+  return [...(await getAllSodMitigations())].sort((a, b) => new Date(a.expiresAt) - new Date(b.expiresAt));
+}
+
+/**
+ * PATCH /api/insights/sod-mitigations/:mitigationId
+ * { expiresAt } — changes a mitigation's expiration date without having to
+ * delete and recreate it (which would lose appliedAt/appliedBy). Returns the
+ * updated mitigation; the latest stats scan is re-synced in the background.
+ */
+export async function updateSodMitigation(mitigationId, { expiresAt } = {}) {
+  if (!expiresAt || Number.isNaN(Date.parse(expiresAt))) {
+    throw badRequest("A valid expiresAt date is required.");
+  }
+  const list = await getAllSodMitigations();
+  const mitigation = list.find((m) => m.id === mitigationId);
+  if (!mitigation) throw badRequest("Mitigation not found.", 404);
+  mitigation.expiresAt = new Date(expiresAt).toISOString();
+  await sodStore().put(tenantKey(), list);
+  syncRoleIntoLatestStatsScan(mitigation.roleId);
+  return mitigation;
+}
+
+/**
+ * DELETE /api/insights/sod-mitigations/:mitigationId
+ * Tenant-scoped revoke — unlike removeRoleSodMitigation this doesn't
+ * re-evaluate any role afterward (the management list isn't tied to one
+ * role's open evaluation sheet). Returns { ok: true }.
+ */
+export async function deleteSodMitigation(mitigationId) {
+  const mitigation = (await getAllSodMitigations()).find((m) => m.id === mitigationId);
+  await removeSodMitigation(mitigationId);
+  if (mitigation) syncRoleIntoLatestStatsScan(mitigation.roleId);
+  return { ok: true };
+}
+
 // ─── Role Composition (Role > Composition tab) ───────────────────────────────
 // One picture of a role against the people it actually covers: who matches the
 // membership rule, which Common Access roles are in scope, and — for the base
