@@ -506,36 +506,3 @@ export async function publishSegments(ids) {
   }
 }
 
-/**
- * GET /api/metadata-value-guids — the stored value -> GUID map reversed, so a
- * segment's ROLE filter (which ISC records by GUID) can be shown by name.
- * Display names come from the attribute's own values list, one call per
- * distinct attribute; a name that can't be fetched falls back to the
- * technical value. Never fails: an error yields an empty map.
- */
-export async function getMetadataValueGuids() {
-  try {
-    const stored = (await metadataValueIds().get(tenantKey())) || {};
-    // "key:technicalValue" -> guid; attribute keys can't contain ":", so the first colon splits.
-    const parsed = Object.entries(stored)
-      .filter(([, guid]) => typeof guid === "string" && guid)
-      .map(([mapKey, guid]) => {
-        const i = mapKey.indexOf(":");
-        return { guid, key: i === -1 ? mapKey : mapKey.slice(0, i), value: i === -1 ? "" : mapKey.slice(i + 1) };
-      });
-    const names = {};
-    for (const key of [...new Set(parsed.map((p) => p.key))]) {
-      const values = await iscGet(
-        `/v2026/access-model-metadata/attributes/${encodeURIComponent(key)}/values`,
-        { limit: 250 }
-      ).catch(() => []);
-      for (const v of values || []) if (v?.value) names[`${key}:${v.value}`] = v.name || v.value;
-    }
-    const byGuid = {};
-    for (const { guid, key, value } of parsed) byGuid[guid] = { key, value, name: names[`${key}:${value}`] || value };
-    return { byGuid, count: Object.keys(byGuid).length };
-  } catch (err) {
-    console.warn("[segments] metadata-value-guids failed:", err.response?.status || err.message);
-    return { byGuid: {}, count: 0 };
-  }
-}

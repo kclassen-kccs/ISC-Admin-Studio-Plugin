@@ -121,8 +121,8 @@ export async function setRoleEnabled(id, enabled) {
 
 // additionalOwners on roles and access profiles: several IDENTITY entries, or
 // exactly one GOVERNANCE_GROUP — never mixed. Returns an error message, or null
-// when valid.
-function additionalOwnersError(additionalOwners) {
+// when valid. Shared with ported/accessProfiles.js.
+export function additionalOwnersError(additionalOwners) {
   if (!Array.isArray(additionalOwners)) return "additionalOwners must be an array.";
   if (additionalOwners.some((o) => !o?.id || !["IDENTITY", "GOVERNANCE_GROUP"].includes(o.type))) {
     return "Each additional owner needs an id and a type of IDENTITY or GOVERNANCE_GROUP.";

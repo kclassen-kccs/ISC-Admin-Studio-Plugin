@@ -31,6 +31,9 @@ import * as PortedWorkItems from "./ported/workItems";
 import * as PortedWorkgroups from "./ported/workgroups";
 import * as PortedLaunchers from "./ported/launchers";
 import * as PortedTenantInfo from "./ported/tenantInfo";
+import * as PortedEntitlements from "./ported/entitlements";
+import * as PortedAccessProfiles from "./ported/accessProfiles";
+import * as PortedMetadata from "./ported/metadataTagging";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -293,8 +296,7 @@ export async function listEntitlementMembers(entitlementId, { limit = 50, offset
 // when @access() search finds nobody (fresh delimited-source grants that
 // haven't been indexed yet). Returns { members, total, uncorrelated }.
 export async function listEntitlementAccountMembers(entitlementId) {
-  const resp = await axios.get(`${API_BASE}/api/entitlements/${entitlementId}/account-members`, { headers: authHeaders() });
-  return resp.data;
+  return PortedEntitlements.listEntitlementAccountMembers(entitlementId);
 }
 
 // Global Access Model Metadata attributes and their registered values.
@@ -311,8 +313,7 @@ export async function listMetadataAttributeValues(key) {
 // Assign / remove one metadata value on an entitlement (server handles the
 // v2026->beta root probe and ad-hoc value registration).
 export async function addEntitlementMetadata(entitlementId, { key, value, name }) {
-  const resp = await axios.post(`${API_BASE}/api/entitlements/${entitlementId}/metadata`, { key, value, name }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.addEntitlementMetadata(entitlementId, { key, value, name });
 }
 // Workflow action schemas — every action's typed input fields (formFields),
 // the same schema SailPoint's own builder renders from. Cached per session.
@@ -362,12 +363,10 @@ export async function addDlGroupsToRoles(id, suggestionIds) {
 // server registers an ad-hoc value first when `name` is given, and probes
 // which API root serves the per-item route on this tenant.
 export async function addObjectMetadata(kind, id, { key, value, name }) {
-  const resp = await axios.post(`${API_BASE}/api/${kind}/${id}/metadata`, { key, value, name }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.addObjectMetadata(kind, id, { key, value, name });
 }
 export async function removeObjectMetadata(kind, id, key, value) {
-  const resp = await axios.delete(`${API_BASE}/api/${kind}/${id}/metadata/${encodeURIComponent(key)}/${encodeURIComponent(value)}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.removeObjectMetadata(kind, id, key, value);
 }
 
 // Adds one metadata value to — or removes it from — every listed object.
@@ -375,22 +374,16 @@ export async function removeObjectMetadata(kind, id, key, value) {
 // "remove". { done, skipped, failed: [{ id, error }] } — on remove, objects
 // that don't carry the value are `skipped`, not failed.
 export async function bulkTagMetadata(kind, { operation, key, value, name, ids }) {
-  const resp = await axios.post(`${API_BASE}/api/${kind}/metadata/bulk-tag`, { operation, key, value, name, ids }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.bulkTagMetadata(kind, { operation, key, value, name, ids });
 }
 
 // Tag many entitlements with one metadata value in a single server call.
 export async function bulkTagEntitlementMetadata({ key, value, name, entitlementIds }) {
-  const resp = await axios.post(`${API_BASE}/api/entitlements/metadata/bulk`, { key, value, name, entitlementIds }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.bulkTagEntitlementMetadata({ key, value, name, entitlementIds });
 }
 
 export async function removeEntitlementMetadata(entitlementId, key, value) {
-  const resp = await axios.delete(
-    `${API_BASE}/api/entitlements/${entitlementId}/metadata/${encodeURIComponent(key)}/${encodeURIComponent(value)}`,
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedMetadata.removeEntitlementMetadata(entitlementId, key, value);
 }
 
 // Same reasoning as listEntitlementMembers — /v2026/roles and
@@ -503,8 +496,7 @@ export async function getEntitlementsCount({ query, sourceId, ownerId, requestab
 // entitlement against apps-on-this-entitlement's-source, rather than
 // something reachable as a plain filter.
 export async function listEntitlementApplications(entitlementId) {
-  const resp = await axios.get(`${API_BASE}/api/entitlements/${entitlementId}/applications`, { headers: authHeaders() });
-  return resp.data;
+  return PortedEntitlements.listEntitlementApplications(entitlementId);
 }
 
 // Hierarchical entitlements (e.g. nested AD groups via memberOf) — ISC's
@@ -520,8 +512,7 @@ export async function listEntitlementChildren(entitlementId) {
 
 // fields: any of { name, description, owner: {id,name}, requestable }
 export async function updateEntitlement(id, fields) {
-  const resp = await axios.patch(`${API_BASE}/api/entitlements/${id}`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedEntitlements.updateEntitlement(id, fields);
 }
 
 // Returns a suggested description only — never writes to the entitlement
@@ -730,11 +721,7 @@ export async function updateSourceProvisioningPolicy(sourceId, usageType, body) 
 // Detail Report print fires both for every listed role in quick succession.
 export async function getEntitlementsByIds(ids) {
   if (!ids.length) return [];
-  const resp = await axios.get(`${API_BASE}/api/entitlements/by-ids`, {
-    params: { ids: ids.join(",") },
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedEntitlements.getEntitlementsByIds(ids);
 }
 
 // ─── Access Requests ──────────────────────────────────────────────────────────
@@ -1267,7 +1254,7 @@ export async function getApiUsageCount({ days = 30 } = {}) {
 // segment's ROLE filter (which ISC records by GUID) can be shown by name.
 // { byGuid: { "<guid>": { key, value, name } } }.
 export async function getMetadataValueGuids() {
-  return PortedSegments.getMetadataValueGuids();
+  return PortedMetadata.getMetadataValueGuids();
 }
 
 export async function getTenantUiMetadata() {
@@ -1313,12 +1300,7 @@ export async function getAccessProfile(id) {
 // doesn't collect either, matching new access profiles starting
 // inactive/non-requestable until deliberately turned on.
 export async function createAccessProfile({ name, owner, sourceId, entitlementIds }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/access-profiles`,
-    { name, owner, sourceId, entitlementIds },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAccessProfiles.createAccessProfile({ name, owner, sourceId, entitlementIds });
 }
 
 // Verified live: DELETE /v2026/access-profiles/:id is a real endpoint (404
@@ -1329,18 +1311,12 @@ export async function deleteAccessProfile(id) {
 }
 
 export async function setAccessProfileEnabled(id, enabled) {
-  const resp = await axios.patch(
-    `${API_BASE}/api/access-profiles/${id}/enabled`,
-    { enabled },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAccessProfiles.setAccessProfileEnabled(id, enabled);
 }
 
 // fields: any of { name, description, owner: {id,name} }
 export async function updateAccessProfile(id, fields) {
-  const resp = await axios.patch(`${API_BASE}/api/access-profiles/${id}`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessProfiles.updateAccessProfile(id, fields);
 }
 
 // Returns a suggested description only — never writes to the access
@@ -1439,12 +1415,7 @@ export async function updateSourceAppAccessProfiles(appId, { add, remove }) {
 
 // add: [{id,name}, ...], remove: [entitlementId, ...]
 export async function updateAccessProfileEntitlements(id, { add, remove }) {
-  const resp = await axios.patch(
-    `${API_BASE}/api/access-profiles/${id}/entitlements`,
-    { add, remove },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAccessProfiles.updateAccessProfileEntitlements(id, { add, remove });
 }
 
 // ─── Sources ─────────────────────────────────────────────────────────────────
@@ -1805,18 +1776,13 @@ export async function deleteAttributeSyncScan(scanId) {
 // The roles / access profiles / entitlements tagged with one metadata value,
 // by name: { items, total }. type: "roles" | "accessprofiles" | "entitlements".
 export async function listAccessByMetadataValue(key, value, type, { limit = 100, offset = 0 } = {}) {
-  const resp = await axios.get(
-    `${API_BASE}/api/metadata/${encodeURIComponent(key)}/values/${encodeURIComponent(value)}/access`,
-    { params: { type, limit, offset }, headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedMetadata.listAccessByMetadataValue(key, value, type, { limit, offset });
 }
 
 // Deletes values of a custom metadata attribute, one ISC call per value (ISC
 // has no batch delete): { deleted: [value], failed: [{ value, error }] }.
 export async function deleteMetadataValues(key, values) {
-  const resp = await axios.post(`${API_BASE}/api/metadata/${encodeURIComponent(key)}/values/delete`, { values }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.deleteMetadataValues(key, values);
 }
 
 // ─── Access Model Metadata search ───────────────────────────────────────────
