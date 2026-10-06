@@ -38,6 +38,7 @@ import * as PortedJsonEdit from "./ported/jsonEdit";
 import * as PortedReports from "./ported/reports";
 import * as PortedCampaignReports from "./ported/campaignReports";
 import * as PortedSpConfig from "./ported/spConfig";
+import * as PortedRoleEvalScans from "./ported/roleEvalScans";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -2742,68 +2743,37 @@ export async function mergeRoleGroupIntoExisting(scanId, groupId) {
 // name-contains query alone can't reproduce). Omit to scope by `query`
 // instead (Role Evaluation's own Start button).
 export async function startRoleEvalScan(query, considerCommonAccessRoles, roleIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans`,
-    {
-      query,
-      ...(considerCommonAccessRoles ? { considerCommonAccessRoles } : {}),
-      ...(roleIds ? { roleIds } : {}),
-    },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedRoleEvalScans.startRoleEvalScan(query, considerCommonAccessRoles, roleIds); // { scanId }
 }
 
 export async function listRoleEvalScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-eval-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleEvalScans.listRoleEvalScans();
 }
 
 export async function getRoleEvalScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-eval-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleEvalScans.getRoleEvalScan(scanId);
 }
 
 export async function cancelRoleEvalScan(scanId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/cancel`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.cancelRoleEvalScan(scanId);
 }
 
 export async function deleteRoleEvalScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/role-eval-scans/${scanId}`, { headers: authHeaders() });
+  await PortedRoleEvalScans.deleteRoleEvalScan(scanId);
 }
 
 export async function acceptRoleEvalResult(scanId, roleId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/results/${roleId}/accept`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.acceptRoleEvalResult(scanId, roleId);
 }
 
 export async function acceptAllRoleEvalResults(scanId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/accept-all`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.acceptAllRoleEvalResults(scanId);
 }
 
 // Marks a scan result accepted without re-applying it — used after the
 // per-item detail sheet already applied everything directly against ISC.
 export async function markRoleEvalResultHandled(scanId, roleId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/results/${roleId}/mark-handled`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.markRoleEvalResultHandled(scanId, roleId);
 }
 
 // ─── Workflows ──────────────────────────────────────────────────────────────

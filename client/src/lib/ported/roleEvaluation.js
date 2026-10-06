@@ -96,7 +96,7 @@ function splitMitigatedSodViolations(violations, mitigations, dimensionId = null
  * evaluated per-identity and can't be meaningfully tested against a role
  * definition alone.
  */
-async function fetchConflictingAccessSodPolicies() {
+export async function fetchConflictingAccessSodPolicies() {
   const policies = await withApiRetry(() => iscGet("/v2026/sod-policies", { limit: 250 }), { label: "fetchConflictingAccessSodPolicies: sod-policies" });
   return (policies || []).filter((p) => p.type === "CONFLICTING_ACCESS_BASED" && p.conflictingAccessCriteria);
 }
@@ -791,7 +791,7 @@ export async function evaluateRole(id, considerCommonAccessRoleIds) {
 
 // ─── SOD mitigation routes ───────────────────────────────────────────────────
 
-function roleEvalResultHasSuggestions(evaluation) {
+export function roleEvalResultHasSuggestions(evaluation) {
   return (
     (evaluation.removeCandidates?.length || 0) > 0 ||
     (evaluation.addCandidates?.length || 0) > 0 ||
@@ -804,14 +804,14 @@ function roleEvalResultHasSuggestions(evaluation) {
 // SOD violations are surfaced separately from "suggestions" — there's no
 // automated fix for a policy conflict, so this must never make a role eligible
 // for the bulk Accept All action.
-function roleEvalResultHasSodViolations(evaluation) {
+export function roleEvalResultHasSodViolations(evaluation) {
   return (
     (evaluation.sodViolations?.length || 0) > 0 ||
     (evaluation.dimensionEvaluations || []).some((d) => (d.sodViolations || []).length > 0)
   );
 }
 
-function roleEvalResultHasMitigatedSodViolations(evaluation) {
+export function roleEvalResultHasMitigatedSodViolations(evaluation) {
   return (
     (evaluation.mitigatedSodViolations?.length || 0) > 0 ||
     (evaluation.dimensionEvaluations || []).some((d) => (d.mitigatedSodViolations || []).length > 0)
