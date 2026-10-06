@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "manifest": {
+    "alias": "admin-studio",
+    "name": { "en": "Admin Studio" },
+    "description": { "en": "Administrative studio for Identity Security Cloud: roles, access profiles, sources, workflows, role mining and more." },
+    "apiScopes": ["sp:scopes:all"],
+    "contentSecurityPolicies": {},
+    "permissionPolicy": {},
+    "iframeAllow": {},
+    "state": "ENABLED",
+    "slots": [{ "slotId": "full-page" }]
+  },
+  "build": { "outDir": "./client/build", "port": 3000 }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "sailpoint-isc-app",
+  "version": "3.4.10",
+  "description": "Admin Studio \u2014 an Identity Security Cloud UI plugin",
+  "scripts": {
+    "start": "cd client && HTTPS=true BROWSER=none npm start",
+    "build": "cd client && npm run build",
+    "install:all": "npm install && cd client && npm install",
+    "deploy": "npm run build && sail ui-plugins upload",
+    "validate": "sail ui-plugins validate-manifest",
+    "version:bump": "node scripts/bump-version.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.111.0"
+  }
+}

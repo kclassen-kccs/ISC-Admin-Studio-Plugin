@@ -1,0 +1,268 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-gray-100 text-gray-900 antialiased;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  html.dark body {
+    @apply bg-gray-950 text-gray-50;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+}
+
+/*
+ * Dark-mode repaint for the whole app. Every screen is built from the same
+ * small palette of Tailwind utilities (surfaces, borders, text, and a
+ * handful of semantic accent colors), so instead of adding a `dark:`
+ * variant to every className in every file, we override those utility
+ * classes wholesale when the `dark` class is on <html>. `.dark .bg-white`
+ * outranks `.bg-white` on specificity alone, so no !important is needed and
+ * source order doesn't matter.
+ */
+
+/* Neutral surfaces */
+.dark .bg-white { background-color: #111827; }
+.dark .bg-gray-50 { background-color: #1f2937; }
+.dark .bg-gray-100 { background-color: #1f2937; }
+.dark .md\:bg-gray-100 { background-color: #1f2937; }
+.dark .bg-gray-200 { background-color: #374151; }
+.dark .hover\:bg-gray-50:hover { background-color: #1f2937; }
+.dark .hover\:bg-gray-100:hover { background-color: #374151; }
+.dark .hover\:bg-gray-200:hover { background-color: #374151; }
+
+/* Neutral text */
+.dark .text-gray-900 { color: #f9fafb; }
+.dark .text-gray-800 { color: #f3f4f6; }
+.dark .text-gray-700 { color: #e5e7eb; }
+.dark .text-gray-600 { color: #d1d5db; }
+.dark .text-gray-500 { color: #9ca3af; }
+.dark .text-gray-400 { color: #6b7280; }
+.dark .text-gray-300 { color: #4b5563; }
+.dark .placeholder-gray-400::placeholder { color: #6b7280; }
+
+/* Neutral borders / rings */
+.dark .border-gray-100 { border-color: #1f2937; }
+.dark .border-gray-200 { border-color: #374151; }
+.dark .border-gray-300 { border-color: #4b5563; }
+
+/* Brand accents ------------------------------------------------------------
+   The blue family is the app's PRIMARY/LINK colour, and ISC hands each tenant
+   its own (actionButtonColor / activeLinkColor). Rather than touch the ~660
+   call sites, the utility classes themselves are repointed here — the same
+   trick the neutral dark-mode rules above use.
+
+   --brand-* are the raw inputs, set at runtime from the tenant's branding
+   (see applyBrandColors). They default to Tailwind's own blue-600/700, so a
+   tenant with no branding renders exactly as before.
+
+   --c-* are the derived values the rules below consume. They are redefined
+   under .dark so one brand colour drives both themes: on white the tints mix
+   toward white, on a dark surface they become translucent washes and the
+   link colour is lifted, because a brand navy that reads on white disappears
+   on #111827.
+
+   The violet/emerald/amber/red families are deliberately NOT branded — they
+   carry meaning (role mining, success, warning, danger), not identity. */
+:root {
+  --brand-action: #2563eb;
+  --brand-link: #2563eb;
+
+  --c-action: var(--brand-action);
+  --c-action-hover: color-mix(in srgb, var(--brand-action) 85%, black);
+  --c-action-deep: color-mix(in srgb, var(--brand-action) 70%, black);
+  --c-link: var(--brand-link);
+  --c-link-strong: color-mix(in srgb, var(--brand-link) 80%, black);
+  --c-link-soft: color-mix(in srgb, var(--brand-link) 65%, white);
+  --c-tint-50: color-mix(in srgb, var(--brand-action) 8%, white);
+  --c-tint-100: color-mix(in srgb, var(--brand-action) 14%, white);
+  --c-edge-100: color-mix(in srgb, var(--brand-action) 22%, white);
+  --c-edge-200: color-mix(in srgb, var(--brand-action) 35%, white);
+}
+
+.dark {
+  --c-action: var(--brand-action);
+  --c-action-hover: color-mix(in srgb, var(--brand-action) 88%, white);
+  --c-action-deep: color-mix(in srgb, var(--brand-action) 70%, black);
+  --c-link: color-mix(in srgb, var(--brand-link) 55%, white);
+  --c-link-strong: color-mix(in srgb, var(--brand-link) 35%, white);
+  --c-link-soft: color-mix(in srgb, var(--brand-link) 25%, white);
+  --c-tint-50: color-mix(in srgb, var(--brand-action) 14%, transparent);
+  --c-tint-100: color-mix(in srgb, var(--brand-action) 20%, transparent);
+  --c-edge-100: color-mix(in srgb, var(--brand-action) 28%, transparent);
+  --c-edge-200: color-mix(in srgb, var(--brand-action) 38%, transparent);
+}
+
+/* Surfaces */
+.bg-blue-50 { background-color: var(--c-tint-50); }
+.bg-blue-100 { background-color: var(--c-tint-100); }
+.hover\:bg-blue-50:hover { background-color: var(--c-tint-50); }
+.hover\:bg-blue-100:hover { background-color: var(--c-tint-100); }
+.bg-blue-600 { background-color: var(--c-action); }
+.bg-blue-700 { background-color: var(--c-action-hover); }
+.bg-blue-800 { background-color: var(--c-action-deep); }
+.hover\:bg-blue-700:hover { background-color: var(--c-action-hover); }
+.hover\:bg-blue-800:hover { background-color: var(--c-action-deep); }
+
+/* Text / links */
+.text-blue-400 { color: var(--c-link-soft); }
+.text-blue-500 { color: var(--c-link); }
+.text-blue-600 { color: var(--c-link); }
+.text-blue-700 { color: var(--c-link-strong); }
+.text-blue-800 { color: var(--c-link-strong); }
+.hover\:text-blue-600:hover { color: var(--c-link); }
+.hover\:text-blue-700:hover { color: var(--c-link-strong); }
+
+/* Borders / rings */
+.border-blue-100 { border-color: var(--c-edge-100); }
+.border-blue-200 { border-color: var(--c-edge-200); }
+.border-blue-300 { border-color: var(--c-edge-200); }
+.border-blue-400 { border-color: var(--c-link); }
+.border-blue-600 { border-color: var(--c-action); }
+.focus\:border-blue-400:focus { border-color: var(--c-link); }
+.ring-blue-100 { --tw-ring-color: var(--c-edge-100); }
+.focus\:ring-blue-100:focus { --tw-ring-color: var(--c-edge-100); }
+
+/* The overlay editors paint their text into a <pre> and make the textarea's
+   own text transparent, so the CARET is the only part of the textarea still
+   drawn — and it was an inline near-black, which is invisible against the
+   dark editor surface. A class, not an inline colour, for the same reason
+   the syntax tokens are classes: inline styles can't be re-themed. */
+.code-caret { caret-color: #111827; }
+.dark .code-caret { caret-color: #f9fafb; }
+
+/* Code tokens for the connector rule editor (BeanShell/Java). Fixed hues,
+   not the brand accent — syntax colour carries meaning. Mirrors the
+   .json-tok-* pairs above, light and dark. */
+.code-tok-kw { color: #7c3aed; font-weight: 500; }
+.code-tok-str { color: #047857; }
+.code-tok-com { color: #6b7280; font-style: italic; }
+.code-tok-num { color: #1d4ed8; }
+.dark .code-tok-kw { color: #c4b5fd; }
+.dark .code-tok-str { color: #6ee7b7; }
+.dark .code-tok-com { color: #9ca3af; }
+.dark .code-tok-num { color: #93c5fd; }
+
+/* JSON type badge for numbers is a DATA TYPE colour sitting beside emerald /
+   amber / violet / pink, not brand — it keeps a fixed blue so it stays
+   distinct whatever colour the tenant brands with. */
+.json-type-num { background-color: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.dark .json-type-num { background-color: rgba(59, 130, 246, 0.12); color: #93c5fd; border-color: rgba(59, 130, 246, 0.35); }
+
+/* Red accents */
+.dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.12); }
+.dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.18); }
+.dark .hover\:bg-red-50:hover { background-color: rgba(239, 68, 68, 0.16); }
+.dark .hover\:bg-red-100:hover { background-color: rgba(239, 68, 68, 0.22); }
+.dark .text-red-400 { color: #f87171; }
+.dark .text-red-500 { color: #f87171; }
+.dark .text-red-600 { color: #f87171; }
+.dark .text-red-700 { color: #fca5a5; }
+.dark .text-red-800 { color: #fecaca; }
+.dark .border-red-200 { border-color: rgba(239, 68, 68, 0.3); }
+
+/* Green accents */
+.dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.12); }
+.dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.18); }
+.dark .bg-green-500 { background-color: #4ade80; }
+.dark .hover\:bg-green-100:hover { background-color: rgba(34, 197, 94, 0.22); }
+.dark .text-green-500 { color: #4ade80; }
+.dark .text-green-600 { color: #4ade80; }
+.dark .text-green-700 { color: #86efac; }
+.dark .text-green-800 { color: #bbf7d0; }
+.dark .border-green-200 { border-color: rgba(34, 197, 94, 0.3); }
+
+/* Emerald accents */
+.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.12); }
+.dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.18); }
+.dark .hover\:bg-emerald-50:hover { background-color: rgba(16, 185, 129, 0.16); }
+.dark .hover\:bg-emerald-100:hover { background-color: rgba(16, 185, 129, 0.22); }
+.dark .text-emerald-600 { color: #34d399; }
+.dark .text-emerald-700 { color: #6ee7b7; }
+.dark .border-emerald-100 { border-color: rgba(16, 185, 129, 0.25); }
+.dark .border-emerald-200 { border-color: rgba(16, 185, 129, 0.3); }
+
+/* Amber accents */
+.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.12); }
+.dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.18); }
+.dark .hover\:bg-amber-100:hover { background-color: rgba(245, 158, 11, 0.22); }
+.dark .text-amber-500 { color: #fbbf24; }
+.dark .text-amber-600 { color: #fbbf24; }
+.dark .text-amber-800 { color: #fde68a; }
+.dark .text-amber-900 { color: #fef3c7; }
+.dark .border-amber-200 { border-color: rgba(245, 158, 11, 0.3); }
+
+/* Violet accents */
+.dark .bg-violet-50 { background-color: rgba(139, 92, 246, 0.12); }
+.dark .bg-violet-100 { background-color: rgba(139, 92, 246, 0.18); }
+.dark .hover\:bg-violet-100:hover { background-color: rgba(139, 92, 246, 0.22); }
+.dark .text-violet-500 { color: #a78bfa; }
+.dark .text-violet-600 { color: #a78bfa; }
+.dark .text-violet-700 { color: #c4b5fd; }
+.dark .border-violet-100 { border-color: rgba(139, 92, 246, 0.25); }
+.dark .border-violet-200 { border-color: rgba(139, 92, 246, 0.3); }
+.dark .text-violet-800 { color: #ddd6fe; }
+
+/* Teal accents (action steps in the AI workflow draft flowchart) */
+.dark .bg-teal-50 { background-color: rgba(20, 184, 166, 0.12); }
+.dark .border-teal-200 { border-color: rgba(20, 184, 166, 0.3); }
+.dark .text-teal-800 { color: #99f6e4; }
+
+/* Misc accents */
+.dark .bg-rose-100 { background-color: rgba(244, 63, 94, 0.18); }
+.dark .text-rose-700 { color: #fda4af; }
+.dark .bg-cyan-100 { background-color: rgba(6, 182, 212, 0.18); }
+.dark .text-cyan-700 { color: #67e8f9; }
+
+/* JSON syntax-highlight tokens (see JsonEditor.jsx highlightJson) — light
+   palette here, re-themed below for dark. These used to be inline hex
+   styles, which dark mode couldn't override (dark-green strings on the
+   dark editor background were unreadable). */
+.json-tok-key { color: #7c3aed; }
+.json-tok-str { color: #047857; }
+.json-tok-lit { color: #b45309; }
+.json-tok-num { color: #1d4ed8; }
+.dark .json-tok-key { color: #c4b5fd; }
+.dark .json-tok-str { color: #6ee7b7; }
+.dark .json-tok-lit { color: #fcd34d; }
+.dark .json-tok-num { color: #93c5fd; }
+/* Search matches inside the JSON editor (see highlightJsonWithMatches).
+   The highlighted <pre> is an overlay aligned character-for-character with
+   a transparent <textarea>, so these may only ever set colour: any padding,
+   border, font or line-height here would reflow the overlay and drift it
+   out of step with the real caret. Colour and border-radius are safe
+   because neither changes text metrics. */
+.json-match {
+  background-color: #fde68a;
+  color: inherit;
+  border-radius: 2px;
+}
+.json-match-active {
+  background-color: #fb923c;
+  color: #1f2937;
+}
+.dark .json-match { background-color: rgba(251, 191, 36, 0.32); }
+.dark .json-match-active { background-color: rgba(249, 115, 22, 0.75); color: #f9fafb; }
+
+/* Tree-mode value inputs highlight on focus with bg-white — keep the
+   focus surface dark in dark mode so light token text stays readable. */
+.dark .focus\:bg-white:focus { background-color: #1f2937; }
+
+/* Branch labels on the AI workflow draft flowchart sit on top of their arrow;
+   the halo is the surface colour behind them, so it follows the theme. */
+.wf-outline-edge-label { stroke: #ffffff; }
+.dark .wf-outline-edge-label { stroke: #111827; fill: #9ca3af; }

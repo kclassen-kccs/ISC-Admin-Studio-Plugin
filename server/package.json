@@ -1,0 +1,29 @@
+{
+  "name": "sailpoint-proxy-server",
+  "version": "3.4.10",
+  "description": "Express proxy for SailPoint ISC API — solves browser CORS restrictions",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon --ext js --ignore data/ --ignore node_modules/ index.js",
+    "migrate:sqlite": "node scripts/migrate-json-to-sqlite.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/bedrock-sdk": "^0.32.4",
+    "@aws-sdk/client-dynamodb": "^3.1111.0",
+    "@aws-sdk/client-s3": "^3.1111.0",
+    "@aws-sdk/lib-dynamodb": "^3.1111.0",
+    "axios": "^1.7.9",
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.5.0",
+    "form-data": "^4.0.6",
+    "helmet": "^8.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

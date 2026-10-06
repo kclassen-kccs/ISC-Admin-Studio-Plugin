@@ -1,0 +1,12 @@
+node_modules
+
+# Secrets and local state — never commit these.
+server/.env
+server/.env.*
+!server/.env.example
+server/data/
+.DS_Store
+
+# Build output
+client/build/
+dist/
