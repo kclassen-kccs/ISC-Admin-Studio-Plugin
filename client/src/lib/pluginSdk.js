@@ -43,19 +43,17 @@ export function getSdk() {
 }
 
 /**
- * The tenant API base URL and a current scoped access token. Prefers
- * window.sailpointConfig() (registered by the SDK after the handshake, fresh
- * token on every call) and falls back to the SDK's own token cache.
+ * The tenant API base URL (context.tenant.apiUrl.idn) and a current scoped
+ * access token. The SDK caches the token and refreshes it before expiry;
+ * forceRefresh is not needed on every call.
  */
 export async function getApiConfig() {
-  await whenPluginReady();
-  if (typeof window.sailpointConfig === "function") {
-    const cfg = await window.sailpointConfig();
-    const baseUrl = cfg?.baseUrl || cfg?.basePath || cfg?.baseURL || cfg?.apiUrl;
-    const token = cfg?.accessToken || cfg?.token;
-    if (baseUrl && token) return { baseUrl: String(baseUrl).replace(/\/+$/, ""), token };
-  }
-  throw new Error("The ISC App Shell did not provide an API base URL and token.");
+  const ctx = await whenPluginReady();
+  const baseUrl = ctx?.tenant?.apiUrl?.idn;
+  if (!baseUrl) throw new Error("The ISC App Shell did not provide a tenant API URL.");
+  const token = await getSdk().api.getToken();
+  if (!token) throw new Error("The ISC App Shell did not provide an access token.");
+  return { baseUrl: String(baseUrl).replace(/\/+$/, ""), token };
 }
 
 /** Mirrors the plugin's internal route into the host URL (no history entry). */
