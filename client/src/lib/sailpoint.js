@@ -40,6 +40,9 @@ import * as PortedCampaignReports from "./ported/campaignReports";
 import * as PortedSpConfig from "./ported/spConfig";
 import * as PortedRoleEvalScans from "./ported/roleEvalScans";
 import * as PortedCertRuns from "./ported/certificationRuns";
+import * as PortedSkeletonScans from "./ported/skeletonScans";
+import * as PortedDlScans from "./ported/dlScans";
+import * as PortedAttributeSyncScans from "./ported/attributeSyncScans";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -346,22 +349,18 @@ export async function listAdOus(sourceId) {
   return PortedSources.listAdOus(sourceId);
 }
 export async function startDlScan({ targetType, sourceId, sourceName, ou }) {
-  const resp = await axios.post(`${API_BASE}/api/insights/dl-scans`, { targetType, sourceId, sourceName, ou }, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.startDlScan({ targetType, sourceId, sourceName, ou });
 }
 export async function getDlScan(id) {
-  const resp = await axios.get(`${API_BASE}/api/insights/dl-scans/${id}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.getDlScan(id);
 }
 export async function createDlGroups(id, suggestionIds) {
-  const resp = await axios.post(`${API_BASE}/api/insights/dl-scans/${id}/create`, { suggestionIds }, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.createDlGroups(id, suggestionIds);
 }
 // After the groups exist and aggregation ran: attach each DL entitlement to
 // its matching mined role so role membership provisions the DL's members.
 export async function addDlGroupsToRoles(id, suggestionIds) {
-  const resp = await axios.post(`${API_BASE}/api/insights/dl-scans/${id}/add-to-roles`, { suggestionIds }, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.addDlGroupsToRoles(id, suggestionIds);
 }
 
 // Assign / remove one metadata value on a role, access profile or
@@ -1627,36 +1626,28 @@ export async function startRoleScan() {
 // Sales" instead of "Tokyo Auto Sales" for " - ". Omit to fall back to
 // Mining Config's saved default, same as rolePrefix/roleSuffix.
 export async function startSkeletonScan({ rolePrefix, roleSuffix, useBoundary, attributeSeparator } = {}) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/skeleton-scans`,
-    { rolePrefix, roleSuffix, useBoundary, attributeSeparator },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedSkeletonScans.startSkeletonScan({ rolePrefix, roleSuffix, useBoundary, attributeSeparator }); // { scanId }
 }
 
 export async function getSkeletonScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/skeleton-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSkeletonScans.getSkeletonScan(scanId);
 }
 
 export async function cancelSkeletonScan(scanId) {
-  await axios.post(`${API_BASE}/api/insights/skeleton-scans/${scanId}/cancel`, {}, { headers: authHeaders() });
+  await PortedSkeletonScans.cancelSkeletonScan(scanId);
 }
 
 export async function listSkeletonScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/skeleton-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSkeletonScans.listSkeletonScans();
 }
 
 export async function deleteSkeletonScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/skeleton-scans/${scanId}`, { headers: authHeaders() });
+  await PortedSkeletonScans.deleteSkeletonScan(scanId);
 }
 
 // Creates one proposed role from a Skeleton Role Model draft in ISC.
 export async function createSkeletonScanRole(scanId, index) {
-  const resp = await axios.post(`${API_BASE}/api/insights/skeleton-scans/${scanId}/results/${index}/create`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedSkeletonScans.createSkeletonScanRole(scanId, index);
 }
 
 export async function listRoleScans() {
@@ -1685,22 +1676,19 @@ export async function deleteRoleScan(scanId) {
 // ─── Attribute Sync scan ────────────────────────────────────────────────────
 
 export async function startAttributeSyncScan() {
-  const resp = await axios.post(`${API_BASE}/api/insights/attribute-sync-scans`, {}, { headers: authHeaders() });
-  return resp.data; // { scanId }
+  return PortedAttributeSyncScans.startAttributeSyncScan(); // { scanId }
 }
 
 export async function listAttributeSyncScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/attribute-sync-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAttributeSyncScans.listAttributeSyncScans();
 }
 
 export async function getAttributeSyncScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/attribute-sync-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAttributeSyncScans.getAttributeSyncScan(scanId);
 }
 
 export async function deleteAttributeSyncScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/attribute-sync-scans/${scanId}`, { headers: authHeaders() });
+  await PortedAttributeSyncScans.deleteAttributeSyncScan(scanId);
 }
 
 // The roles / access profiles / entitlements tagged with one metadata value,
@@ -2682,12 +2670,7 @@ export async function restoreSpConfig(data) {
 // source independently, same idea as the Role Scan page's per-group Create
 // Role alongside its bulk Create All Roles. See server's POST .../:id/deploy.
 export async function deployAttributeSyncScan(scanId, sourceId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/attribute-sync-scans/${scanId}/deploy`,
-    sourceId ? { sourceId } : {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAttributeSyncScans.deployAttributeSyncScan(scanId, sourceId || undefined);
 }
 
 // items: [{ key, name, dimensional, facts: string[] }, ...]
