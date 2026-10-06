@@ -25,6 +25,7 @@ import * as PortedCustomizers from "./ported/connectorCustomizers";
 import * as identitiesPort from "./ported/identities";
 import * as PortedAi from "./ported/aiDescriptions";
 import * as PortedSettings from "./ported/settings";
+import * as PortedSegments from "./ported/segments";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -1272,8 +1273,7 @@ export async function getApiUsageCount({ days = 30 } = {}) {
 // segment's ROLE filter (which ISC records by GUID) can be shown by name.
 // { byGuid: { "<guid>": { key, value, name } } }.
 export async function getMetadataValueGuids() {
-  const resp = await axios.get(`${API_BASE}/api/metadata-value-guids`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getMetadataValueGuids();
 }
 
 export async function getTenantUiMetadata() {
@@ -1615,13 +1615,11 @@ export async function setSchemaRoleBoundary({ enabled, attributes, createDataSeg
 // ─── Data Segments ──────────────────────────────────────────────────────────
 
 export async function listSegments() {
-  const resp = await axios.get(`${API_BASE}/api/segments`, { headers: authHeaders() });
-  return sortByName(resp.data);
+  return sortByName(await PortedSegments.listSegments());
 }
 
 export async function getSegment(id) {
-  const resp = await axios.get(`${API_BASE}/api/segments/${id}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getSegment(id);
 }
 
 /**
@@ -1633,8 +1631,7 @@ export async function getSegment(id) {
  * the paths it arrived by.
  */
 export async function getSegmentAccess(id) {
-  const resp = await axios.get(`${API_BASE}/api/segments/${id}/access`, { headers: authHeaders() });
-  const d = resp.data || {};
+  const d = (await PortedSegments.getSegmentAccess(id)) || {};
   return { ...d, roles: sortByName(d.roles), accessProfiles: sortByName(d.accessProfiles), entitlements: sortByName(d.entitlements) };
 }
 
@@ -1643,11 +1640,7 @@ export async function getSegmentAccess(id) {
 // denormalizes segment membership anywhere. Same { members, total } shape
 // as listEntitlementMembers.
 export async function listSegmentMembers(id, { limit = 50, offset = 0, query } = {}) {
-  const resp = await axios.get(`${API_BASE}/api/segments/${id}/members`, {
-    params: { limit, offset, query: query || undefined },
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedSegments.listSegmentMembers(id, { limit, offset, query });
 }
 
 // The reverse direction of getSegmentAccess — given an identity/role/
@@ -1662,37 +1655,32 @@ export async function getIdentitySegments(identityId) {
 }
 
 export async function getRoleSegments(roleId) {
-  const resp = await axios.get(`${API_BASE}/api/roles/${roleId}/segments`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getRoleSegments(roleId);
 }
 
 export async function getEntitlementSegments(entitlementId) {
-  const resp = await axios.get(`${API_BASE}/api/entitlements/${entitlementId}/segments`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getEntitlementSegments(entitlementId);
 }
 
 export async function deleteSegment(id) {
-  await axios.delete(`${API_BASE}/api/segments/${id}`, { headers: authHeaders() });
+  await PortedSegments.deleteSegment(id);
 }
 
 export async function setSegmentActive(id, active) {
-  const resp = await axios.patch(`${API_BASE}/api/segments/${id}/active`, { active }, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.setSegmentActive(id, active);
 }
 
 // Ensures this segment has an editable draft, creating one (copied from
 // the published record) if it doesn't already have one. A no-op — not an
 // error — if it's already a draft or already has one.
 export async function createSegmentDraft(id) {
-  const resp = await axios.post(`${API_BASE}/api/segments/${id}/create-draft`, {}, { headers: authHeaders() });
-  return resp.data; // { draftId, segmentName, created, wasAlreadyDraft }
+  return PortedSegments.createSegmentDraft(id); // { draftId, segmentName, created, wasAlreadyDraft }
 }
 
 // A segment's criteria has no effect on real identities until published —
 // enabled alone isn't enough.
 export async function publishSegments(ids) {
-  const resp = await axios.post(`${API_BASE}/api/segments/publish`, { ids }, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.publishSegments(ids);
 }
 
 // "Assign Matching Roles" — proposes which existing roles AND entitlements
