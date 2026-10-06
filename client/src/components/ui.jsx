@@ -439,9 +439,10 @@ export function SelectionActionBar({ count, label = "selected", progressText, ac
 }
 
 // ─── Primary button ───────────────────────────────────────────────────────────
-export function PrimaryButton({ children, onClick, loading, disabled, className = "" }) {
+export function PrimaryButton({ children, onClick, loading, disabled, className = "", type }) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled || loading}
       className={`w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-medium text-sm py-3.5 rounded-xl hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${className}`}
@@ -453,9 +454,10 @@ export function PrimaryButton({ children, onClick, loading, disabled, className 
 }
 
 // ─── Outline button ───────────────────────────────────────────────────────────
-export function OutlineButton({ children, onClick, loading, disabled, className = "" }) {
+export function OutlineButton({ children, onClick, loading, disabled, className = "", type }) {
   return (
     <button
+      type={type}
       onClick={onClick}
       disabled={disabled || loading}
       className={`w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 font-medium text-sm py-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${className}`}

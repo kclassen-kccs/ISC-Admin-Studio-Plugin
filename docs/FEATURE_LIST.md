@@ -1750,6 +1750,14 @@ Certifications, Preferences.
   PDF" and Close.
 - **Appearance** — System (default, follows the OS), Light, or Dark.
   Per-user, server-side, syncs across devices.
+- **Anthropic API Key** — the key the AI features (descriptions, role
+  evaluation review, workflow drafting) use to call api.anthropic.com
+  directly from the browser. Entered masked (eye toggle to reveal while
+  typing); once saved it shows only as prefix + last four with Change /
+  Remove, and can't be read back. Stored only in this browser's
+  preferences, never in the bundle, never sent to ISC. ISC's plugin
+  content security policy doesn't yet allow the outbound call, so AI
+  reports that until SailPoint permits it.
 - **JSON Edit Mode** — Text (default) or Tree: the view every JSON editor
   opens in (workflows, transforms, forms, launchers, metadata, source JSON,
   raw JSON panels). Per-user and synced across devices like Appearance.

@@ -340,7 +340,26 @@ function normalizeUserPreferences(stored) {
   if (!THEME_MODES.has(stored?.themeMode)) prefs.themeMode = stored?.darkMode === true ? "dark" : "system";
   if (!JSON_EDIT_MODES.has(prefs.jsonEditMode)) prefs.jsonEditMode = "text";
   prefs.darkMode = prefs.themeMode === "dark"; // kept so an older client reads something sensible
+  if (typeof prefs.anthropicApiKey !== "string" || !prefs.anthropicApiKey) delete prefs.anthropicApiKey;
   return prefs;
+}
+
+// The Anthropic key is the one preference that is a secret. It stays in this
+// browser's IndexedDB (never in the bundle, never sent to ISC or the AI proxy)
+// and leaves the page only as the x-api-key header of a direct call to
+// api.anthropic.com (see lib/aiProxy.js). Readers of the preferences get a
+// masked hint, not the key; only the AI client reads the key itself.
+function maskApiKey(key) {
+  const k = String(key || "");
+  if (!k) return null;
+  const prefix = k.startsWith("sk-ant-") ? "sk-ant-" : "";
+  return `${prefix}••••••••${k.slice(-4)}`;
+}
+
+/** What the preferences screen and other callers see instead of the key. */
+function withoutSecrets(prefs) {
+  const { anthropicApiKey, ...rest } = prefs;
+  return { ...rest, hasAnthropicApiKey: !!anthropicApiKey, anthropicApiKeyHint: maskApiKey(anthropicApiKey) };
 }
 
 const userPreferencesStore = () => recordStore("user-preferences");
@@ -353,15 +372,37 @@ async function userKey() {
   return key;
 }
 
-export async function getUserPreferences() {
+async function readUserPreferences() {
   const forTenant = (await userPreferencesStore().get(tenantKey())) || {};
   return normalizeUserPreferences(forTenant[await userKey()]);
 }
 
-/** PUT /api/preferences — only ever writes the signed-in user's own entry. */
+export async function getUserPreferences() {
+  return withoutSecrets(await readUserPreferences());
+}
+
+/** The stored Anthropic API key, or null. For the AI client only; never log it. */
+export async function getAnthropicApiKey() {
+  try {
+    return (await readUserPreferences()).anthropicApiKey || null;
+  } catch {
+    return null; // no session yet → no key
+  }
+}
+
+/**
+ * PUT /api/preferences — only ever writes the signed-in user's own entry.
+ * `anthropicApiKey`: a string stores it, "" or null removes it.
+ */
 export async function setUserPreferences(body = {}) {
-  const { themeMode, darkMode, jsonEditMode } = body;
+  const { themeMode, darkMode, jsonEditMode, anthropicApiKey } = body;
   const patch = {};
+  if (anthropicApiKey !== undefined) {
+    if (anthropicApiKey !== null && typeof anthropicApiKey !== "string") throw badRequest("anthropicApiKey must be a string.");
+    const key = (anthropicApiKey || "").trim();
+    if (key && !/^[\x21-\x7e]{20,}$/.test(key)) throw badRequest("That doesn't look like an Anthropic API key.");
+    patch.anthropicApiKey = key || null;
+  }
   if (jsonEditMode !== undefined) {
     if (!JSON_EDIT_MODES.has(jsonEditMode)) throw badRequest('jsonEditMode must be "text" or "tree".');
     patch.jsonEditMode = jsonEditMode;
@@ -380,5 +421,5 @@ export async function setUserPreferences(body = {}) {
   const forTenant = (await userPreferencesStore().get(tenantKey())) || {};
   forTenant[user] = normalizeUserPreferences({ ...(forTenant[user] || {}), ...patch });
   await userPreferencesStore().put(tenantKey(), forTenant);
-  return forTenant[user];
+  return withoutSecrets(forTenant[user]);
 }
