@@ -49,6 +49,7 @@ import * as PortedRoleStats from "./ported/roleStats";
 import * as PortedSegmentRoleMatches from "./ported/segmentRoleMatches";
 import * as PortedSegmentScans from "./ported/segmentScans";
 import * as PortedAccessSegmentScans from "./ported/accessSegmentScans";
+import * as PortedParameters from "./ported/parameters";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -2303,12 +2304,15 @@ export async function getSegmentCreateProgress(scanId) {
 }
 
 // ─── Parameter Storage (Browse > Parameters) ────────────────────────────────
-// Reads/deletes use the generic proxy. Specifications, create and update go
-// through dedicated server routes: the spec has to be requested in English,
-// and private fields (passwords, client secrets, header values) are
-// encrypted server-side, end to end to SailPoint's enclave, before they're
-// sent — see server/parameterCrypto.js. Private values never come back from
-// ISC; a parameter only ever returns its public fields.
+// Reads/deletes call ISC directly. Specifications, create and update are
+// ported in lib/ported/parameters.js: the spec has to be requested in
+// English, and private fields (passwords, client secrets, header values) are
+// encrypted in the browser, end to end to SailPoint's enclave, before they're
+// sent — see lib/ported/parameterCrypto.js. Private values never come back
+// from ISC; a parameter only ever returns its public fields.
+// testParameterHttp / testParameterOAuth are NOT ported: they called
+// arbitrary hosts from the server, which the plugin's CSP forbids from the
+// browser; they still fail with 501 until a replacement exists.
 
 export async function listParameters() {
   return fetchAllPages((page) => req("GET", "/parameter-storage/parameters", { params: page }), { pageSize: 250 });
@@ -2323,13 +2327,11 @@ export async function getParameterReferences(id) {
   return fetchAllPages((page) => req("GET", `/parameter-storage/parameters/${id}/references`, { params: page }), { pageSize: 250 });
 }
 export async function getParameterSpecifications() {
-  const resp = await axios.get(`${API_BASE}/api/parameters/specifications`, { headers: authHeaders() });
-  return resp.data;
+  return PortedParameters.getParameterSpecifications();
 }
 // body: { type, name, description, ownerId, publicFields: {}, privateFields: {} }
 export async function createParameter(body) {
-  const resp = await axios.post(`${API_BASE}/api/parameters`, body, { headers: authHeaders() });
-  return resp.data;
+  return PortedParameters.createParameter(body);
 }
 // body: any of { name, description, ownerId, publicFields, privateFields } —
 // empty private values are left unchanged.
@@ -2354,8 +2356,7 @@ export async function testParameterOAuth(body) {
 }
 
 export async function updateParameter(id, body) {
-  const resp = await axios.patch(`${API_BASE}/api/parameters/${id}`, body, { headers: authHeaders() });
-  return resp.data;
+  return PortedParameters.updateParameter(id, body);
 }
 
 // ─── Identity: user levels & governance groups (Identity detail tabs) ──────
