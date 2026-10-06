@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Settings, Monitor, Sun, Moon, Wand2, Check, AlignLeft, ListTree } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
@@ -49,7 +48,6 @@ const JSON_MODE_OPTIONS = [
 export default function PreferencesPage() {
   const { session } = useAuth();
   const { mode, setMode, systemDark } = useTheme();
-  const navigate = useNavigate();
   const [autoConvertOpen, setAutoConvertOpen] = useState(false);
 
   const saveThemeMode = useMutation({
@@ -147,18 +145,6 @@ export default function PreferencesPage() {
             Where JSON editors open. JSON that doesn&apos;t parse always opens in Text, and each editor&apos;s own
             Tree | Text tabs still switch for that edit.
           </p>
-        </div>
-
-        {/* Same treatment as Profile's own sign-out button — a full-width
-            outlined red button, last on the page. */}
-        <div className="px-4 pt-6">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 border border-red-200 text-red-600 font-medium text-sm py-3.5 rounded-xl hover:bg-red-50 transition-colors"
-          >
-            <LogOut size={16} />
-            Sign out
-          </button>
         </div>
       </div>
 
