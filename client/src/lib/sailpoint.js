@@ -23,6 +23,7 @@ import * as PortedSchemas from "./ported/sourceSchemas";
 import * as PortedIdProfile from "./ported/sourceIdentityProfile";
 import * as PortedCustomizers from "./ported/connectorCustomizers";
 import * as identitiesPort from "./ported/identities";
+import * as PortedAi from "./ported/aiDescriptions";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -521,8 +522,7 @@ export async function updateEntitlement(id, fields) {
 // Returns a suggested description only — never writes to the entitlement
 // itself. Same shape as generateAccessProfileDescription.
 export async function generateEntitlementDescription(id) {
-  const resp = await axios.post(`${API_BASE}/api/entitlements/${id}/generate-description`, {}, { headers: authHeaders() });
-  return resp.data; // { description }
+  return PortedAi.generateEntitlementDescription(id);
 }
 
 // { results: [{ roleId, description } | { roleId, error }] } — keyed
@@ -530,12 +530,7 @@ export async function generateEntitlementDescription(id) {
 // BulkDescriptionReviewSheet unchanged — same shape as
 // generateAllAccessProfileDescriptions.
 export async function generateAllEntitlementDescriptions(entitlementIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/entitlement-descriptions/generate-all`,
-    { entitlementIds },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAi.generateAllEntitlementDescriptions(entitlementIds);
 }
 
 // Not an ISC passthrough — hits the server's own endpoint. Which property
@@ -632,12 +627,7 @@ export async function createDisconnectedSource({ name }) {
 // AI-modify the source's account CSV per the user's instructions — returns
 // { csv, rows }; nothing is saved until the caller uploads it.
 export async function generateSourceData(sourceId, { prompt, csvBase64 }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/sources/${sourceId}/generate-data`,
-    { prompt, csvBase64 },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAi.generateSourceData(sourceId, { prompt, csvBase64 });
 }
 
 export async function detectSourceSchema(sourceId, { filename, csvBase64 }) {
@@ -936,19 +926,13 @@ export async function certifyRoles(roleIds) {
 // The caller shows it alongside the current one and applies it via
 // updateRole, same as any manual edit, once the user confirms.
 export async function generateRoleDescription(roleId) {
-  const resp = await axios.post(`${API_BASE}/api/roles/${roleId}/generate-description`, {}, { headers: authHeaders() });
-  return resp.data; // { description }
+  return PortedAi.generateRoleDescription(roleId);
 }
 
 // { results: [{ roleId, description } | { roleId, error }] } — suggestions
 // only, nothing written.
 export async function generateAllRoleDescriptions(roleIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-descriptions/generate-all`,
-    { roleIds },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAi.generateAllRoleDescriptions(roleIds);
 }
 
 // Only succeeds when the role has no common-access record yet (fresh
@@ -1388,8 +1372,7 @@ export async function updateAccessProfile(id, fields) {
 // Returns a suggested description only — never writes to the access
 // profile itself. Same shape as generateRoleDescription.
 export async function generateAccessProfileDescription(id) {
-  const resp = await axios.post(`${API_BASE}/api/access-profiles/${id}/generate-description`, {}, { headers: authHeaders() });
-  return resp.data; // { description }
+  return PortedAi.generateAccessProfileDescription(id);
 }
 
 // { results: [{ roleId, description } | { roleId, error }] } — suggestions
@@ -1397,12 +1380,7 @@ export async function generateAccessProfileDescription(id) {
 // the result feeds BulkDescriptionReviewSheet unchanged — same shape as
 // generateAllRoleDescriptions.
 export async function generateAllAccessProfileDescriptions(accessProfileIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/access-profile-descriptions/generate-all`,
-    { accessProfileIds },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAi.generateAllAccessProfileDescriptions(accessProfileIds);
 }
 
 // ─── Source Applications ────────────────────────────────────────────────────
@@ -1463,20 +1441,14 @@ export async function updateSourceApp(id, fields) {
 }
 
 export async function generateSourceAppDescription(id) {
-  const resp = await axios.post(`${API_BASE}/api/source-apps/${id}/generate-description`, {}, { headers: authHeaders() });
-  return resp.data; // { description }
+  return PortedAi.generateSourceAppDescription(id);
 }
 
 // { results: [{ roleId, description } | { roleId, error }] } — keyed
 // "roleId" server-side so the result feeds BulkDescriptionReviewSheet
 // unchanged, same shape as generateAllRoleDescriptions.
 export async function generateAllSourceAppDescriptions(appIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/source-app-descriptions/generate-all`,
-    { appIds },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAi.generateAllSourceAppDescriptions(appIds);
 }
 
 // An Application's access, in ISC's own model, is granted via the Access
@@ -1553,17 +1525,11 @@ export async function getSourceIdentityProfile(id) {
 }
 
 export async function generateSourceDescription(id) {
-  const resp = await axios.post(`${API_BASE}/api/sources/${id}/generate-description`, {}, { headers: authHeaders() });
-  return resp.data; // { description }
+  return PortedAi.generateSourceDescription(id);
 }
 
 export async function generateAllSourceDescriptions(sourceIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/source-descriptions/generate-all`,
-    { sourceIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results: [{ roleId, description } | { roleId, error }] }
+  return PortedAi.generateAllSourceDescriptions(sourceIds);
 }
 
 // fields: any of { name, description, owner: {id,name},
@@ -2903,12 +2869,7 @@ export async function deployAttributeSyncScan(scanId, sourceId) {
 // only, nothing written; used to seed each proposed role's description
 // before Create All Roles actually creates anything.
 export async function generateRoleScanDescriptions(items) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/generate-descriptions`,
-    { items },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAi.generateRoleScanDescriptions(items);
 }
 
 export async function createRoleForPeerGroup(scanId, groupId, { name, description, ownerId, ownerName }) {
