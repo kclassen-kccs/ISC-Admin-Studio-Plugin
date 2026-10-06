@@ -1,16 +1,59 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
+import { RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, FileText, ShieldCheck } from "lucide-react";
 import {
   getIdentitiesCount, getSourcesCount, getRolesCount,
   getRoleStatsSummary, listMyReports, getSchemaAnalysis, NO_ACCESS,
+  getTenantUiMetadata,
 } from "../lib/sailpoint";
 import { useAuth } from "../hooks/useAuth";
 import { TopBar } from "../components/TopBar";
 import { MetricCard, SectionLabel } from "../components/ui";
 import toast from "react-hot-toast";
 import { tenantUiHost } from "../lib/tenantHost";
+
+// Black or white text on a given badge colour, by perceived brightness — the
+// badge colour is whatever the tenant configured, so neither is safe to
+// assume (ISC's own examples range from near-black navy to bright amber).
+function readableOn(hex) {
+  const h = String(hex || "").replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  if (full.length !== 6) return undefined;
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
+  // Rec. 601 luma.
+  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#111827" : "#ffffff";
+}
+
+// The app's name plate, across the top of Home. Plain display, not a link:
+// the App Shell already signed the user in and scoped the token, so there is
+// no auth state to signal. The blue family is repointed to the tenant's own
+// ISC brand colours (see index.css), so it always matches the console.
+function AdminStudioBanner({ session, badge }) {
+  return (
+    <div className="mx-4 mt-4 mb-2 flex items-center justify-center gap-4 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-4">
+      <ShieldCheck size={40} strokeWidth={2} className="text-blue-600 flex-shrink-0" />
+      <div className="flex flex-col items-center min-w-0">
+        <span className="text-2xl md:text-3xl font-bold leading-tight text-blue-700 tracking-tight">Admin Studio</span>
+        {badge ? (
+          <span
+            className="text-xs leading-tight truncate font-medium px-2 py-0.5 rounded mt-1 max-w-full"
+            style={badge.color ? { backgroundColor: badge.color, color: readableOn(badge.color) } : undefined}
+            title={`Instance badge — ${badge.name}`}
+          >
+            {badge.name}
+          </span>
+        ) : (
+          (session?.siteName || session?.tenant) && (
+            <span className="text-sm leading-tight truncate text-blue-700 opacity-70 mt-0.5">
+              {session.siteName || session.tenant}
+            </span>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   const { session } = useAuth();
@@ -21,6 +64,13 @@ export default function HomePage() {
   const srcs = useQuery({ queryKey: ["sources-count"], queryFn: getSourcesCount });
   const roles = useQuery({ queryKey: ["roles-count"], queryFn: getRolesCount });
   const roleStats = useQuery({ queryKey: ["role-stats-summary"], queryFn: getRoleStatsSummary });
+  // ORG_ADMIN-only and experimental, so a plain user just gets { badge: null }.
+  const uiMetadata = useQuery({
+    queryKey: ["tenant-ui-metadata"],
+    queryFn: getTenantUiMetadata,
+    enabled: !!session?.tenant,
+    staleTime: 10 * 60 * 1000,
+  });
   const myReports = useQuery({ queryKey: ["my-reports"], queryFn: listMyReports });
 
   // A tenant that has never run Schema Analysis has no mining attributes
@@ -64,6 +114,8 @@ export default function HomePage() {
       />
 
       <div className="flex-1 overflow-y-auto pb-24">
+        <AdminStudioBanner session={session} badge={uiMetadata.data?.badge || null} />
+
         {/* Metrics */}
         <SectionLabel>At a glance</SectionLabel>
         <div className="grid grid-cols-2 gap-3 px-4">
