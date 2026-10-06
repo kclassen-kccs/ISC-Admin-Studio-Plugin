@@ -1044,7 +1044,7 @@ async function scanRolePopulationWithAccess(membership) {
  * entitlement refs give a name but never a source, and the screen groups by
  * source, so a name-only placeholder is looked up and overwritten too.
  */
-async function fillMissingEntitlementInfo(ids, info) {
+export async function fillMissingEntitlementInfo(ids, info) {
   const missing = ids.filter((id) => !info.get(id)?.source && /^[A-Za-z0-9-]+$/.test(String(id)));
   for (let i = 0; i < missing.length; i += 100) {
     const chunk = missing.slice(i, i + 100);

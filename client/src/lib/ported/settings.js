@@ -200,9 +200,9 @@ export async function setStudioPreferences(body = {}) {
       throw badRequest("certAttributeKeys must not repeat an attribute.");
     }
     // Only keys Schema Analysis found on this tenant's identities. That
-    // analysis is stored under "schema-analyses" (not ported yet, so until it
+    // analysis is stored under "schema-analysis" (not ported yet, so until it
     // is, only an empty list can be saved).
-    const analysis = await recordStore("schema-analyses").get(tenantKey());
+    const analysis = await recordStore("schema-analysis").get(tenantKey());
     if (analysis) {
       const valid = new Set((analysis.candidates || []).map((c) => c.key));
       if (keys.some((k) => !valid.has(k))) {

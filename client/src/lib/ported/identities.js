@@ -8,6 +8,7 @@
 
 import { iscGet, iscPost, iscPatch, iscRaw, withApiRetry, describeError, routeError, badRequest } from "../isc";
 import { getCredentials } from "../sailpoint";
+import { fetchAllDataSegments, identityMatchesSegment } from "./segments";
 
 const EXPERIMENTAL = { "X-SailPoint-Experimental": "true" };
 
@@ -368,59 +369,6 @@ export async function updateIdentityGovernanceGroups(identityId, { add = [], rem
 }
 
 // ─── Data segments an identity falls into ──────────────────────────────────
-
-// This experimental endpoint's own max limit is 50 (verified live: 51+ 400s
-// "semantically invalid"). enabled and published each filter to an exact
-// value — there's no combination meaning "all" — so fetch all 4 combos and
-// merge by id. count:true is required, or the endpoint silently drops some
-// matching segments (verified live).
-const DATA_SEGMENTS_PAGE_SIZE = 50;
-
-async function fetchAllForCombo(params) {
-  const all = [];
-  for (let offset = 0; ; offset += DATA_SEGMENTS_PAGE_SIZE) {
-    const page = await withApiRetry(
-      () => iscGet("/v2026/data-segments", { ...params, count: true, limit: DATA_SEGMENTS_PAGE_SIZE, offset }, EXPERIMENTAL),
-      { label: "fetchAllForCombo: data-segments page" }
-    );
-    if (!Array.isArray(page) || page.length === 0) break;
-    all.push(...page);
-    if (page.length < DATA_SEGMENTS_PAGE_SIZE) break;
-  }
-  return all;
-}
-
-async function fetchAllDataSegments() {
-  const combos = [
-    { enabled: true, published: true },
-    { enabled: true, published: false },
-    { enabled: false, published: true },
-    { enabled: false, published: false },
-  ];
-  const pages = await Promise.all(combos.map((params) => fetchAllForCombo(params)));
-  const byId = new Map();
-  for (const page of pages) for (const s of page) byId.set(s.id, s);
-  return [...byId.values()];
-}
-
-function extractSegmentEqualsLeaves(expr, out = []) {
-  if (!expr) return out;
-  if (expr.operator === "EQUALS" && expr.attribute) {
-    out.push({ attrKey: expr.attribute, value: expr.value?.value });
-    return out;
-  }
-  for (const child of expr.children || []) extractSegmentEqualsLeaves(child, out);
-  return out;
-}
-
-// Segment membership for an identity is never denormalized anywhere, so this
-// evaluates the segment's own memberFilter attribute=value pairs (flat
-// AND-of-EQUALS leaves) against the identity's own attributes.
-function identityMatchesSegment(segment, attrs) {
-  const leaves = extractSegmentEqualsLeaves(segment.memberFilter?.expression);
-  if (leaves.length === 0) return false;
-  return leaves.every((l) => String((attrs || {})[l.attrKey] ?? "") === String(l.value ?? ""));
-}
 
 export async function getIdentitySegments(identityId) {
   try {
