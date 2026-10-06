@@ -26,6 +26,11 @@ import * as identitiesPort from "./ported/identities";
 import * as PortedAi from "./ported/aiDescriptions";
 import * as PortedSettings from "./ported/settings";
 import * as PortedSegments from "./ported/segments";
+import * as PortedIdentityProfiles from "./ported/identityProfiles";
+import * as PortedWorkItems from "./ported/workItems";
+import * as PortedWorkgroups from "./ported/workgroups";
+import * as PortedLaunchers from "./ported/launchers";
+import * as PortedTenantInfo from "./ported/tenantInfo";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -170,19 +175,17 @@ export async function listIdentitiesPage(params) {
 // populate the Identities list's Identity Profile filter pill directly —
 // not derived by scanning identities for the profiles they happen to use.
 export async function listIdentityProfiles() {
-  const resp = await axios.get(`${API_BASE}/api/identity-profiles`, { headers: authHeaders() });
-  return sortByName(resp.data);
+  return sortByName(await PortedIdentityProfiles.listIdentityProfiles());
 }
 
 // ISC's "Apply Changes" — re-evaluates every identity under the profile
 // against its current mappings. Asynchronous: resolves once ISC accepts it.
 export async function processIdentityProfile(id) {
-  const resp = await axios.post(`${API_BASE}/api/identity-profiles/${id}/process-identities`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedIdentityProfiles.processIdentityProfile(id);
 }
 
 export async function deleteIdentityProfile(id) {
-  await axios.delete(`${API_BASE}/api/identity-profiles/${id}`, { headers: authHeaders() });
+  await PortedIdentityProfiles.deleteIdentityProfile(id);
 }
 
 export async function getIdentity(id) {
@@ -800,30 +803,25 @@ export async function approveRequest(approvalId, comment = "Approved via ISC app
 }
 
 // ─── Work items (pending manual tasks) ─────────────────────────────────────────
-// Not ISC passthroughs — hit the server's own /api/work-items routes, which
-// proxy SailPoint's v3 Work Items API (GET /v3/work-items only ever returns
-// Pending items, so a completed one just stops appearing — no local
-// filtering needed). Completion calls SailPoint's documented
-// POST /v3/work-items/:id/complete.
+// Ported from the server's own /api/work-items routes (lib/ported/workItems),
+// which wrap SailPoint's v3 Work Items API (GET /v3/work-items only ever
+// returns Pending items, so a completed one just stops appearing — no local
+// filtering needed).
 
 export async function listWorkItems() {
-  const resp = await axios.get(`${API_BASE}/api/work-items`, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkItems.listWorkItems();
 }
 
 export async function getPendingWorkItemsCount() {
-  const resp = await axios.get(`${API_BASE}/api/work-items/pending-count`, { headers: authHeaders() });
-  return resp.data.count;
+  return (await PortedWorkItems.getPendingWorkItemsCount()).count;
 }
 
 export async function getWorkItem(id) {
-  const resp = await axios.get(`${API_BASE}/api/work-items/${id}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkItems.getWorkItem(id);
 }
 
 export async function completeWorkItem(id) {
-  const resp = await axios.post(`${API_BASE}/api/work-items/${id}/complete`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkItems.completeWorkItem(id);
 }
 
 export async function rejectRequest(approvalId, comment = "Rejected via ISC app") {
@@ -1259,11 +1257,7 @@ export async function listRoleDimensions(roleId) {
 // has branding configured, so each returns an "unavailable" shape the card
 // can render instead of breaking the whole dashboard.
 export async function getApiUsageCount({ days = 30 } = {}) {
-  const resp = await axios.get(`${API_BASE}/api/dashboard/api-usage`, {
-    params: { days },
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedTenantInfo.getApiUsageCount({ days });
 }
 
 // The tenant's instance badge (Sandbox / Production / ...). Lives on the UI
@@ -1277,25 +1271,18 @@ export async function getMetadataValueGuids() {
 }
 
 export async function getTenantUiMetadata() {
-  const resp = await axios.get(`${API_BASE}/api/tenant-ui-metadata`, { headers: authHeaders() });
-  return resp.data;
+  return PortedTenantInfo.getTenantUiMetadata();
 }
 
 export async function getBranding() {
-  const resp = await axios.get(`${API_BASE}/api/dashboard/branding`, { headers: authHeaders() });
-  return resp.data;
+  return PortedTenantInfo.getBranding();
 }
 
-// The logo streams through our own server (the ISC URL needs the tenant
-// token). Auth here is the x-sp-session HEADER, which an <img src> can't
-// send — so the image is fetched as a blob and handed to the tag as an
-// object URL. Callers must revoke it when they're done with it.
+// The ISC logo URL needs the tenant token, which an <img src> can't send —
+// so the image is fetched as a blob (with the plugin's token) and handed to
+// the tag as an object URL. Callers must revoke it when they're done with it.
 export async function fetchBrandingLogoObjectUrl() {
-  const resp = await axios.get(`${API_BASE}/api/dashboard/branding/logo`, {
-    headers: authHeaders(),
-    responseType: "blob",
-  });
-  return URL.createObjectURL(resp.data);
+  return URL.createObjectURL(await PortedTenantInfo.fetchBrandingLogoBlob());
 }
 
 // Matches listRoles: total roles, not just requestable ones.
@@ -2186,8 +2173,7 @@ export async function getLauncher(id) {
 // { entitlement | null, matchedBy } — the entitlement ISC created for this
 // launcher on its internal IdentityNow source (see the server route).
 export async function getLauncherEntitlement(id) {
-  const resp = await axios.get(`${API_BASE}/api/launchers/${id}/entitlement`, { headers: authHeaders() });
-  return resp.data;
+  return PortedLaunchers.getLauncherEntitlement(id);
 }
 
 // An entitlement's request config: approval steps for access and
@@ -2219,8 +2205,7 @@ export async function deleteItemApprovalConfig(objectId, scope) {
 // Makes the launcher's entitlement requestable — now if ISC has created it,
 // otherwise the server waits for it in the background. { status: "done" | "pending" }
 export async function makeLauncherEntitlementRequestable(id) {
-  const resp = await axios.post(`${API_BASE}/api/launchers/${id}/entitlement/requestable`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedLaunchers.makeLauncherEntitlementRequestable(id);
 }
 
 // body: { name, description, type: "INTERACTIVE_PROCESS", disabled,
@@ -2457,10 +2442,9 @@ export async function deleteCertificationRun(runId) {
 // selection of the suggested items) or "metadata" (suggested items are
 // tagged with the Boundary metadata attribute and the segment's Access
 // Model is a FILTER on it — see Segments by Metadata).
-// The server's own version, uncached — see server's GET /api/version.
+// The "server" is now this bundle, so its version is the client package's.
 export async function getServerVersion() {
-  const resp = await axios.get(`${API_BASE}/api/version`, { headers: authHeaders(), params: { t: Date.now() } });
-  return resp.data?.version || null;
+  return PortedTenantInfo.getVersion()?.version || null;
 }
 
 export async function startSegmentScan({ includeRoles = true, includeEntitlements = true, mode } = {}) {
@@ -2619,30 +2603,26 @@ export async function listGovernanceGroupMembers(id) {
 
 // fields: { name, description, owner: {id,name} }
 export async function createGovernanceGroup(fields) {
-  const resp = await axios.post(`${API_BASE}/api/workgroups`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.createGovernanceGroup(fields);
 }
 
 // fields: any of { name, description, owner: {id,name} } — only what changed.
 export async function updateGovernanceGroup(id, fields) {
-  const resp = await axios.patch(`${API_BASE}/api/workgroups/${id}`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.updateGovernanceGroup(id, fields);
 }
 
 export async function deleteGovernanceGroup(id) {
-  await axios.delete(`${API_BASE}/api/workgroups/${id}`, { headers: authHeaders() });
+  await PortedWorkgroups.deleteGovernanceGroup(id);
 }
 
 // { add: [{id,name}], remove: [{id,name}] } → { added, removed, errors }
 export async function updateGovernanceGroupMembers(id, { add = [], remove = [] } = {}) {
-  const resp = await axios.post(`${API_BASE}/api/workgroups/${id}/members`, { add, remove }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.updateGovernanceGroupMembers(id, { add, remove });
 }
 
 // { usage: [{ type, id, name, how: [labels] }], errors }
 export async function getGovernanceGroupUsage(id) {
-  const resp = await axios.get(`${API_BASE}/api/workgroups/${id}/usage`, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.getGovernanceGroupUsage(id);
 }
 
 // ─── Org config (Browse > Org Info) ─────────────────────────────────────────
@@ -3068,8 +3048,7 @@ export async function listTransforms({ limit = 250, offset = 0 } = {}) {
 // events instead: { updated: { [transformId]: { at, by } }, scanned, truncated }.
 // A transform with no entry hasn't changed within ISC's audit retention.
 export async function getTransformsLastUpdated() {
-  const resp = await axios.get(`${API_BASE}/api/transforms/last-updated`, { headers: authHeaders() });
-  return resp.data;
+  return PortedTenantInfo.getTransformsLastUpdated();
 }
 
 export async function getTransform(id) {
