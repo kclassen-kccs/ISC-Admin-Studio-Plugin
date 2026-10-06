@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { reportRoute } from "./lib/pluginSdk";
 import { HashRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -11,64 +11,84 @@ import { NavDrawerProvider } from "./hooks/useNavDrawer";
 import { SideNav, MobileNavDrawer } from "./components/Nav";
 import { RouteErrorBoundary } from "./components/ErrorBoundary";
 import { getUserPreferences } from "./lib/sailpoint";
+import { Spinner } from "./components/ui";
 
 import HomePage from "./pages/HomePage";
-import IdentitiesPage from "./pages/IdentitiesPage";
-import IdentityDetailPage from "./pages/IdentityDetailPage";
-import SourcesPage from "./pages/SourcesPage";
-import WorkflowsPage from "./pages/WorkflowsPage";
-import WorkflowDetailPage from "./pages/WorkflowDetailPage";
-import TransformsPage from "./pages/TransformsPage";
-import TransformDetailPage from "./pages/TransformDetailPage";
-import Base64Page from "./pages/tools/Base64Page";
-import UrlEncodePage from "./pages/tools/UrlEncodePage";
-import SourceDetailPage from "./pages/SourceDetailPage";
-import SourceEditAccountsPage from "./pages/SourceEditAccountsPage";
-import ConnectorRulePage from "./pages/ConnectorRulePage";
-import ConnectorCustomizerPage from "./pages/ConnectorCustomizerPage";
-import AccessProfilesPage from "./pages/AccessProfilesPage";
-import AccessProfileDetailPage from "./pages/AccessProfileDetailPage";
-import ApplicationsPage from "./pages/ApplicationsPage";
-import ApplicationDetailPage from "./pages/ApplicationDetailPage";
-import RolesPage from "./pages/RolesPage";
-import RoleDetailPage from "./pages/RoleDetailPage";
-import RequestsPage from "./pages/RequestsPage";
-import ApprovalsPage, { ApprovalDetailPage } from "./pages/ApprovalsPage";
-import TasksPage, { TaskDetailPage } from "./pages/TasksPage";
-import CertificationCampaignsPage, { CampaignDetailPage } from "./pages/CertificationCampaignsPage";
-import ProfilePage from "./pages/ProfilePage";
-import ScanForRolesPage, { RoleScanDetailPage } from "./pages/roleMining/ScanForRolesPage";
-import AttributeSyncPage, { AttributeSyncScanDetailPage } from "./pages/roleMining/AttributeSyncPage";
-import SegmentsMiningPage, { SegmentScanDetailPage } from "./pages/roleMining/SegmentsMiningPage";
-import AccessSegmentsMiningPage, { AccessSegmentScanDetailPage } from "./pages/roleMining/AccessSegmentsMiningPage";
-import IscSegmentsPage, { IscSegmentDetailPage } from "./pages/IscSegmentsPage";
-import OrgInfoPage from "./pages/OrgInfoPage";
-import GovernanceGroupsPage, { GovernanceGroupDetailPage } from "./pages/GovernanceGroupsPage";
-import ParametersPage, { ParameterDetailPage } from "./pages/ParametersPage";
-import DistributionGroupsPage from "./pages/roleMining/DistributionGroupsPage";
-import CertificationsPage, { CertificationRunDetailPage, CertificationCampaignDetailPage } from "./pages/roleMining/CertificationsPage";
-import FormsPage from "./pages/FormsPage";
-import LaunchersPage, { LauncherDetailPage } from "./pages/LaunchersPage";
-import MetadataPage, { MetadataAttributeDetailPage, MetadataValueDetailPage } from "./pages/MetadataPage";
-import SkeletonRolesPage, { SkeletonScanDetailPage } from "./pages/roleMining/SkeletonRolesPage";
-import RoleEvaluationPage, { RoleEvalScanDetailPage } from "./pages/roleMining/RoleEvaluationPage";
-import ScanningConfigPage from "./pages/studioSettings/ScanningConfigPage";
-import EvaluationConfigPage from "./pages/studioSettings/EvaluationConfigPage";
-import SchemaAnalysisPage from "./pages/studioSettings/SchemaAnalysisPage";
-import PreferencesPage from "./pages/studioSettings/PreferencesPage";
-import UserCertificationsPage from "./pages/studioSettings/UserCertificationsPage";
-import OperationsPage from "./pages/tools/OperationsPage";
-import BackupPage from "./pages/BackupPage";
-import RestorePage from "./pages/RestorePage";
-import BackupOfflineSourcesPage from "./pages/BackupOfflineSourcesPage";
-import RestoreOfflineSourcePage from "./pages/RestoreOfflineSourcePage";
-import EntitlementsPage from "./pages/EntitlementsPage";
-import EntitlementDetailPage from "./pages/EntitlementDetailPage";
-import SegmentsPage from "./pages/SegmentsPage";
-import SegmentDetailPage from "./pages/SegmentDetailPage";
-import SegmentRoleMatchPage from "./pages/SegmentRoleMatchPage";
-import ReportsPage from "./pages/ReportsPage";
-import { Spinner } from "./components/ui";
+// Pages load on demand so each feature area (Browsing, Role Mining, Studio
+// Settings, Tools) and its heavy deps (jsPDF, JSZip) stay out of the first load.
+const page = (load, name = "default") => lazy(() => load().then((m) => ({ default: m[name] })));
+const IdentitiesPage = page(() => import("./pages/IdentitiesPage"));
+const IdentityDetailPage = page(() => import("./pages/IdentityDetailPage"));
+const SourcesPage = page(() => import("./pages/SourcesPage"));
+const WorkflowsPage = page(() => import("./pages/WorkflowsPage"));
+const WorkflowDetailPage = page(() => import("./pages/WorkflowDetailPage"));
+const TransformsPage = page(() => import("./pages/TransformsPage"));
+const TransformDetailPage = page(() => import("./pages/TransformDetailPage"));
+const Base64Page = page(() => import("./pages/tools/Base64Page"));
+const UrlEncodePage = page(() => import("./pages/tools/UrlEncodePage"));
+const SourceDetailPage = page(() => import("./pages/SourceDetailPage"));
+const SourceEditAccountsPage = page(() => import("./pages/SourceEditAccountsPage"));
+const ConnectorRulePage = page(() => import("./pages/ConnectorRulePage"));
+const ConnectorCustomizerPage = page(() => import("./pages/ConnectorCustomizerPage"));
+const AccessProfilesPage = page(() => import("./pages/AccessProfilesPage"));
+const AccessProfileDetailPage = page(() => import("./pages/AccessProfileDetailPage"));
+const ApplicationsPage = page(() => import("./pages/ApplicationsPage"));
+const ApplicationDetailPage = page(() => import("./pages/ApplicationDetailPage"));
+const RolesPage = page(() => import("./pages/RolesPage"));
+const RoleDetailPage = page(() => import("./pages/RoleDetailPage"));
+const RequestsPage = page(() => import("./pages/RequestsPage"));
+const ApprovalsPage = page(() => import("./pages/ApprovalsPage"));
+const ApprovalDetailPage = page(() => import("./pages/ApprovalsPage"), "ApprovalDetailPage");
+const TasksPage = page(() => import("./pages/TasksPage"));
+const TaskDetailPage = page(() => import("./pages/TasksPage"), "TaskDetailPage");
+const CertificationCampaignsPage = page(() => import("./pages/CertificationCampaignsPage"));
+const CampaignDetailPage = page(() => import("./pages/CertificationCampaignsPage"), "CampaignDetailPage");
+const ProfilePage = page(() => import("./pages/ProfilePage"));
+const ScanForRolesPage = page(() => import("./pages/roleMining/ScanForRolesPage"));
+const RoleScanDetailPage = page(() => import("./pages/roleMining/ScanForRolesPage"), "RoleScanDetailPage");
+const AttributeSyncPage = page(() => import("./pages/roleMining/AttributeSyncPage"));
+const AttributeSyncScanDetailPage = page(() => import("./pages/roleMining/AttributeSyncPage"), "AttributeSyncScanDetailPage");
+const SegmentsMiningPage = page(() => import("./pages/roleMining/SegmentsMiningPage"));
+const SegmentScanDetailPage = page(() => import("./pages/roleMining/SegmentsMiningPage"), "SegmentScanDetailPage");
+const AccessSegmentsMiningPage = page(() => import("./pages/roleMining/AccessSegmentsMiningPage"));
+const AccessSegmentScanDetailPage = page(() => import("./pages/roleMining/AccessSegmentsMiningPage"), "AccessSegmentScanDetailPage");
+const IscSegmentsPage = page(() => import("./pages/IscSegmentsPage"));
+const IscSegmentDetailPage = page(() => import("./pages/IscSegmentsPage"), "IscSegmentDetailPage");
+const OrgInfoPage = page(() => import("./pages/OrgInfoPage"));
+const GovernanceGroupsPage = page(() => import("./pages/GovernanceGroupsPage"));
+const GovernanceGroupDetailPage = page(() => import("./pages/GovernanceGroupsPage"), "GovernanceGroupDetailPage");
+const ParametersPage = page(() => import("./pages/ParametersPage"));
+const ParameterDetailPage = page(() => import("./pages/ParametersPage"), "ParameterDetailPage");
+const DistributionGroupsPage = page(() => import("./pages/roleMining/DistributionGroupsPage"));
+const CertificationsPage = page(() => import("./pages/roleMining/CertificationsPage"));
+const CertificationRunDetailPage = page(() => import("./pages/roleMining/CertificationsPage"), "CertificationRunDetailPage");
+const CertificationCampaignDetailPage = page(() => import("./pages/roleMining/CertificationsPage"), "CertificationCampaignDetailPage");
+const FormsPage = page(() => import("./pages/FormsPage"));
+const LaunchersPage = page(() => import("./pages/LaunchersPage"));
+const LauncherDetailPage = page(() => import("./pages/LaunchersPage"), "LauncherDetailPage");
+const MetadataPage = page(() => import("./pages/MetadataPage"));
+const MetadataAttributeDetailPage = page(() => import("./pages/MetadataPage"), "MetadataAttributeDetailPage");
+const MetadataValueDetailPage = page(() => import("./pages/MetadataPage"), "MetadataValueDetailPage");
+const SkeletonRolesPage = page(() => import("./pages/roleMining/SkeletonRolesPage"));
+const SkeletonScanDetailPage = page(() => import("./pages/roleMining/SkeletonRolesPage"), "SkeletonScanDetailPage");
+const RoleEvaluationPage = page(() => import("./pages/roleMining/RoleEvaluationPage"));
+const RoleEvalScanDetailPage = page(() => import("./pages/roleMining/RoleEvaluationPage"), "RoleEvalScanDetailPage");
+const ScanningConfigPage = page(() => import("./pages/studioSettings/ScanningConfigPage"));
+const EvaluationConfigPage = page(() => import("./pages/studioSettings/EvaluationConfigPage"));
+const SchemaAnalysisPage = page(() => import("./pages/studioSettings/SchemaAnalysisPage"));
+const PreferencesPage = page(() => import("./pages/studioSettings/PreferencesPage"));
+const UserCertificationsPage = page(() => import("./pages/studioSettings/UserCertificationsPage"));
+const OperationsPage = page(() => import("./pages/tools/OperationsPage"));
+const BackupPage = page(() => import("./pages/BackupPage"));
+const RestorePage = page(() => import("./pages/RestorePage"));
+const BackupOfflineSourcesPage = page(() => import("./pages/BackupOfflineSourcesPage"));
+const RestoreOfflineSourcePage = page(() => import("./pages/RestoreOfflineSourcePage"));
+const EntitlementsPage = page(() => import("./pages/EntitlementsPage"));
+const EntitlementDetailPage = page(() => import("./pages/EntitlementDetailPage"));
+const SegmentsPage = page(() => import("./pages/SegmentsPage"));
+const SegmentDetailPage = page(() => import("./pages/SegmentDetailPage"));
+const SegmentRoleMatchPage = page(() => import("./pages/SegmentRoleMatchPage"));
+const ReportsPage = page(() => import("./pages/ReportsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -161,6 +181,7 @@ function AppRoutes() {
           style={{ paddingLeft: "env(safe-area-inset-left)", paddingRight: "env(safe-area-inset-right)" }}
         >
           <RouteErrorBoundary key={location.pathname}>
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center p-10"><Spinner size={24} /></div>}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/identities" element={<IdentitiesPage />} />
@@ -258,6 +279,7 @@ function AppRoutes() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </Suspense>
           </RouteErrorBoundary>
         </div>
       </div>
