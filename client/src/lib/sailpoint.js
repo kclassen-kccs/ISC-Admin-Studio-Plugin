@@ -43,6 +43,7 @@ import * as PortedCertRuns from "./ported/certificationRuns";
 import * as PortedSkeletonScans from "./ported/skeletonScans";
 import * as PortedDlScans from "./ported/dlScans";
 import * as PortedAttributeSyncScans from "./ported/attributeSyncScans";
+import * as PortedRoleScans from "./ported/roleScans";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -1604,12 +1605,7 @@ export async function assignSegmentRoleMatches(matchId, items) {
 // ─── Role Insight: peer groups ────────────────────────────────────────────────
 
 export async function startRoleScan() {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedRoleScans.startRoleScan(); // { scanId }
 }
 
 // ─── Skeleton role generation ──────────────────────────────────────────────────
@@ -1651,26 +1647,19 @@ export async function createSkeletonScanRole(scanId, index) {
 }
 
 export async function listRoleScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleScans.listRoleScans();
 }
 
 export async function getRoleScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleScans.getRoleScan(scanId);
 }
 
 export async function cancelRoleScan(scanId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/${scanId}/cancel`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleScans.cancelRoleScan(scanId);
 }
 
 export async function deleteRoleScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/role-scans/${scanId}`, { headers: authHeaders() });
+  await PortedRoleScans.deleteRoleScan(scanId);
 }
 
 // ─── Attribute Sync scan ────────────────────────────────────────────────────
@@ -2682,24 +2671,14 @@ export async function generateRoleScanDescriptions(items) {
 }
 
 export async function createRoleForPeerGroup(scanId, groupId, { name, description, ownerId, ownerName }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/${scanId}/groups/${groupId}/create-role`,
-    { name, description, ownerId, ownerName },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleScans.createRoleForPeerGroup(scanId, groupId, { name, description, ownerId, ownerName });
 }
 
 // For a peer group whose exact attribute combination already matches an
 // existing role (group.existingRole), merges the group's own proposed
 // common access into that role instead of creating a duplicate.
 export async function mergeRoleGroupIntoExisting(scanId, groupId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/${scanId}/groups/${groupId}/merge-into-existing-role`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data; // { roleId, roleName, addedCount }
+  return PortedRoleScans.mergeRoleGroupIntoExisting(scanId, groupId); // { roleId, roleName, addedCount }
 }
 
 // ─── Role Evaluation scan ──────────────────────────────────────────────────────
