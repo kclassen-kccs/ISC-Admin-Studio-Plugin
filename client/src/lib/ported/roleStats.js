@@ -18,57 +18,22 @@ import { iscGet, withApiRetry } from "../isc";
 import { recordStore } from "../store";
 import { tenantKey, mapWithConcurrency, getTenantSettings } from "./roleShared";
 import { getCommonAccessRoleStatus } from "./roleCommonAccess";
-import { startJob, newScanId } from "./scanJobs";
+import { startScheduledRoleEvalScan } from "./roleEvalScans";
 
 const ROLE_EVAL_SCANS_STORE = "role-eval-scans";
 const ROLE_EVAL_DIMENSION_CONCURRENCY = 2;
 
 const roleEvalScans = () => recordStore(ROLE_EVAL_SCANS_STORE);
 
-// The Role Evaluation scan runner (the server's runRoleEvalScan(scanId)) lives
-// in its own port; it registers itself here so Run Now can start the very
-// same job the Role Evaluation page does, without a circular import.
-let roleEvalScanRunner = null;
-
-/** Registers `fn(scanId)` as the runner Run Now starts for a scheduled-tagged scan. */
-export function setRoleEvalScanRunner(fn) {
-  roleEvalScanRunner = typeof fn === "function" ? fn : null;
-}
-
 /**
  * POST /api/insights/role-stats-refresh/run-now
  * Runs a Role Evaluation scan across every role, tagged triggeredBy
  * "scheduled" — so it counts toward the Home screen's stats exactly like a
  * real scheduled run. Returns { scanId } immediately; the scan runs in the
- * background.
+ * background (see roleEvalScans).
  */
 export async function runRoleStatsRefreshNow() {
-  const scanId = newScanId("roleevalscan");
-  await roleEvalScans().put(scanId, {
-    id: scanId,
-    tenant: tenantKey(),
-    status: "running",
-    startedAt: new Date().toISOString(),
-    completedAt: null,
-    scopeQuery: null,
-    scanned: 0,
-    totalRoles: 0,
-    results: [],
-    error: null,
-    newRoleProposals: [],
-    roleGapCheckError: null,
-    commonAccessExclusionFailed: false,
-    commonAccessFlagExceptions: [],
-    commonAccessFlagCheckBetaUnavailable: false,
-    triggeredBy: "scheduled",
-  });
-  startJob(ROLE_EVAL_SCANS_STORE, scanId, async () => {
-    if (!roleEvalScanRunner) {
-      throw new Error("The Role Evaluation scan runner is not available in this build.");
-    }
-    await roleEvalScanRunner(scanId);
-  });
-  return { scanId };
+  return startScheduledRoleEvalScan();
 }
 
 /**
