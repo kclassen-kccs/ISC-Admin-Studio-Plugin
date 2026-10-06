@@ -39,6 +39,7 @@ import * as PortedReports from "./ported/reports";
 import * as PortedCampaignReports from "./ported/campaignReports";
 import * as PortedSpConfig from "./ported/spConfig";
 import * as PortedRoleEvalScans from "./ported/roleEvalScans";
+import * as PortedCertRuns from "./ported/certificationRuns";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -2278,52 +2279,42 @@ export async function listCampaignReviewItems(campaignId) {
 // > User Certifications (cert* keys on studio preferences).
 
 export async function startCertificationRun() {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs`, {}, { headers: authHeaders() });
-  return resp.data; // { runId }
+  return PortedCertRuns.startCertificationRun(); // { runId }
 }
 
 export async function listCertificationRuns() {
-  const resp = await axios.get(`${API_BASE}/api/insights/certification-runs`, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.listCertificationRuns();
 }
 
 // full: true also returns every campaign's member list with each member's
 // access items (large) — needed only by the detailed printout.
 export async function getCertificationRun(runId, { full = false } = {}) {
-  const resp = await axios.get(`${API_BASE}/api/insights/certification-runs/${runId}`, {
-    params: full ? { full: 1 } : undefined,
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedCertRuns.getCertificationRun(runId, { full });
 }
 
 // { run, index, campaign } — one campaign with its members and their access.
 export async function getCertificationRunCampaign(runId, index) {
-  const resp = await axios.get(`${API_BASE}/api/insights/certification-runs/${runId}/campaigns/${index}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.getCertificationRunCampaign(runId, index);
 }
 
 // Creates one planned campaign from the run in ISC (as a draft). Resolves
 // with the updated result row (members stripped); rejects with ISC's error.
 export async function createCertificationCampaign(runId, index) {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs/${runId}/campaigns/${index}/create`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.createCertificationCampaign(runId, index);
 }
 
 // Re-reads every created campaign's status/alerts from ISC; returns the run
 // (members stripped). Cheap enough to poll while any campaign is PENDING.
 export async function syncCertificationRunStatus(runId) {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs/${runId}/sync-status`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.syncCertificationRunStatus(runId);
 }
 
 export async function cancelCertificationRun(runId) {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs/${runId}/cancel`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.cancelCertificationRun(runId);
 }
 
 export async function deleteCertificationRun(runId) {
-  await axios.delete(`${API_BASE}/api/insights/certification-runs/${runId}`, { headers: authHeaders() });
+  await PortedCertRuns.deleteCertificationRun(runId);
 }
 
 // ─── Segment scans (Mining > Data Segments) ─────────────────────────────────
