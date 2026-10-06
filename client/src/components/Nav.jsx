@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Home, Users, UsersRound, Send, CheckSquare, ShieldCheck, Sparkles, Settings, Users2, LayoutGrid, Layers, Database, X, ClipboardCheck, ClipboardList, ChevronDown, Shapes, Bone, RefreshCw, Archive, Download, Upload, DatabaseBackup, DatabaseZap, BarChart3, Key, Tags, GitBranch, FunctionSquare, Wrench, Binary, Percent, Mail, BadgeCheck, Activity, Rocket, Split, Building2, KeyRound } from "lucide-react";
+import { Home, Users, UsersRound, ShieldCheck, Sparkles, Settings, Users2, LayoutGrid, Layers, Database, X, ClipboardCheck, ClipboardList, ChevronDown, Shapes, Bone, RefreshCw, Archive, Download, Upload, DatabaseBackup, DatabaseZap, BarChart3, Key, Tags, GitBranch, FunctionSquare, Wrench, Binary, Percent, Mail, BadgeCheck, Activity, Rocket, Split, Building2, KeyRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { useNavDrawer } from "../hooks/useNavDrawer";
-import { getPendingApprovalsCount, getPendingWorkItemsCount, getSchemaAnalysis, getTenantUiMetadata } from "../lib/sailpoint";
+import { getSchemaAnalysis, getTenantUiMetadata } from "../lib/sailpoint";
 import pkg from "../../package.json";
 import { tenantUiHost } from "../lib/tenantHost";
 
@@ -59,14 +59,9 @@ const ROLE_MINING_ACCESS_SEGMENTS_SUBLINK = { path: "/role-mining/access-segment
 
 // Sidebar-only sub-links shown nested under the Tools tab — Event Log
 // first (reads the tenant's audit events and offers AI fix suggestions),
-// then Requests, Approvals and Tasks (moved here from Browse; they keep
-// their own top-level paths, see onTools), then Base64 and URL Encode,
-// which run entirely client-side.
+// then Base64 and URL Encode, which run entirely client-side.
 const TOOLS_SUBLINKS = [
   { path: "/tools/event-log", label: "Event Log", Icon: Activity },
-  { path: "/requests", label: "Requests", Icon: Send },
-  { path: "/approvals", label: "Approvals", Icon: CheckSquare },
-  { path: "/tasks", label: "Tasks", Icon: ClipboardList },
   { path: "/tools/base64", label: "Base64", Icon: Binary },
   { path: "/tools/url-encode", label: "URL Encode", Icon: Percent },
 ];
@@ -192,15 +187,6 @@ function NavContent({ onNavigate = () => {} }) {
   const backupRestoreExpanded = onBackupRestore || expandedTab === "backupRestore";
   const toolsExpanded = onTools || expandedTab === "tools";
 
-  // A quiet flag on the Approvals link — no need to open the tab to know
-  // there's something waiting.
-  const pendingApprovals = useQuery({
-    queryKey: ["pending-approvals-count"],
-    queryFn: getPendingApprovalsCount,
-    enabled: !!session,
-  });
-  const hasPending = typeof pendingApprovals.data === "number" && pendingApprovals.data > 0;
-
   // ORG_ADMIN-only and experimental, so a plain user just gets { badge: null }
   // and the box falls back to the registered site name.
   const uiMetadata = useQuery({
@@ -210,13 +196,6 @@ function NavContent({ onNavigate = () => {} }) {
     staleTime: 10 * 60 * 1000,
   });
   const badge = uiMetadata.data?.badge || null;
-
-  const pendingTasks = useQuery({
-    queryKey: ["pending-work-items-count"],
-    queryFn: getPendingWorkItemsCount,
-    enabled: !!session,
-  });
-  const hasPendingTasks = typeof pendingTasks.data === "number" && pendingTasks.data > 0;
 
   // ISC only honours admin authorities on a strongly authenticated token, so
   // this is the difference between the app working and 403ing everywhere.
@@ -332,12 +311,6 @@ function NavContent({ onNavigate = () => {} }) {
               >
                 <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
                 <span className="flex-1 text-left">{label}</span>
-                {isToolsTab && (hasPending || hasPendingTasks) && (
-                  <span
-                    className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"
-                    title="Pending approvals or tasks"
-                  />
-                )}
                 {hasSubmenu && (
                   <ChevronDown
                     size={14}
@@ -390,18 +363,6 @@ function NavContent({ onNavigate = () => {} }) {
                       >
                         <SubIcon size={14} strokeWidth={1.8} />
                         <span className="flex-1">{subLabel}</span>
-                        {subPath === "/approvals" && hasPending && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"
-                            title={`${pendingApprovals.data} pending approval${pendingApprovals.data === 1 ? "" : "s"}`}
-                          />
-                        )}
-                        {subPath === "/tasks" && hasPendingTasks && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"
-                            title={`${pendingTasks.data} pending task${pendingTasks.data === 1 ? "" : "s"}`}
-                          />
-                        )}
                       </button>
                     );
                   })}
@@ -459,18 +420,6 @@ function NavContent({ onNavigate = () => {} }) {
                       >
                         <SubIcon size={14} strokeWidth={1.8} />
                         <span className="flex-1">{subLabel}</span>
-                        {subPath === "/approvals" && hasPending && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"
-                            title={`${pendingApprovals.data} pending approval${pendingApprovals.data === 1 ? "" : "s"}`}
-                          />
-                        )}
-                        {subPath === "/tasks" && hasPendingTasks && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"
-                            title={`${pendingTasks.data} pending task${pendingTasks.data === 1 ? "" : "s"}`}
-                          />
-                        )}
                       </button>
                     );
                   })}

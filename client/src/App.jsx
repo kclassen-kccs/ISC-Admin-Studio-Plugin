@@ -36,11 +36,6 @@ const ApplicationsPage = page(() => import("./pages/ApplicationsPage"));
 const ApplicationDetailPage = page(() => import("./pages/ApplicationDetailPage"));
 const RolesPage = page(() => import("./pages/RolesPage"));
 const RoleDetailPage = page(() => import("./pages/RoleDetailPage"));
-const RequestsPage = page(() => import("./pages/RequestsPage"));
-const ApprovalsPage = page(() => import("./pages/ApprovalsPage"));
-const ApprovalDetailPage = page(() => import("./pages/ApprovalsPage"), "ApprovalDetailPage");
-const TasksPage = page(() => import("./pages/TasksPage"));
-const TaskDetailPage = page(() => import("./pages/TasksPage"), "TaskDetailPage");
 const CertificationCampaignsPage = page(() => import("./pages/CertificationCampaignsPage"));
 const CampaignDetailPage = page(() => import("./pages/CertificationCampaignsPage"), "CampaignDetailPage");
 const ProfilePage = page(() => import("./pages/ProfilePage"));
@@ -217,17 +212,11 @@ function AppRoutes() {
             <Route path="/segments/:id" element={<SegmentDetailPage />} />
             <Route path="/access-segments" element={<IscSegmentsPage />} />
             <Route path="/access-segments/:id" element={<IscSegmentDetailPage />} />
-            <Route path="/requests" element={<RequestsPage />} />
-            <Route path="/requests/new" element={<RequestsPage />} />
-            <Route path="/approvals" element={<ApprovalsPage />} />
-            <Route path="/approvals/:id" element={<ApprovalDetailPage />} />
-            <Route path="/tasks" element={<TasksPage />} />
             <Route path="/parameters" element={<ParametersPage />} />
             <Route path="/parameters/:id" element={<ParameterDetailPage />} />
             <Route path="/org-info" element={<OrgInfoPage />} />
             <Route path="/governance-groups" element={<GovernanceGroupsPage />} />
             <Route path="/governance-groups/:id" element={<GovernanceGroupDetailPage />} />
-            <Route path="/tasks/:id" element={<TaskDetailPage />} />
             <Route path="/certifications" element={<CertificationCampaignsPage />} />
             <Route path="/certifications/:id" element={<CampaignDetailPage />} />
             <Route path="/role-mining" element={<Navigate to="/role-mining/roles" replace />} />

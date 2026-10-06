@@ -27,7 +27,6 @@ import * as PortedAi from "./ported/aiDescriptions";
 import * as PortedSettings from "./ported/settings";
 import * as PortedSegments from "./ported/segments";
 import * as PortedIdentityProfiles from "./ported/identityProfiles";
-import * as PortedWorkItems from "./ported/workItems";
 import * as PortedWorkgroups from "./ported/workgroups";
 import * as PortedLaunchers from "./ported/launchers";
 import * as PortedTenantInfo from "./ported/tenantInfo";
@@ -724,15 +723,7 @@ export async function getEntitlementsByIds(ids) {
   return PortedEntitlements.getEntitlementsByIds(ids);
 }
 
-// ─── Access Requests ──────────────────────────────────────────────────────────
-
-export async function listAccessRequests({ limit = 25 } = {}) {
-  // /access-requests only accepts POST (create); listing is /access-request-status.
-  // It has no status filter, so status filtering happens client-side.
-  return req("GET", "/access-request-status", {
-    params: { limit, "requested-for": "me" },
-  });
-}
+// ─── Access Requests (grant/revoke from a role or access profile) ─────────────
 
 export async function submitAccessRequest({ requestedFor, itemId, itemType, comment, requestType = "GRANT_ACCESS" }) {
   return req("POST", "/access-requests", {
@@ -751,70 +742,6 @@ export async function submitAccessRequest({ requestedFor, itemId, itemType, comm
 // depending on the item's own revocationRequestConfig, same as granting.
 export async function revokeAccessRequest({ requestedFor, itemId, itemType, comment }) {
   return submitAccessRequest({ requestedFor, itemId, itemType, comment, requestType: "REVOKE_ACCESS" });
-}
-
-export async function cancelAccessRequest(requestId, comment = "Cancelled via mobile app") {
-  return req("POST", "/access-requests/cancel", {
-    data: { accountActivityId: requestId, comment },
-  });
-}
-
-// ─── Approvals ────────────────────────────────────────────────────────────────
-
-// Approval endpoints require an explicit "owner-id" for non-admin user
-// tokens ('"owner-id" fields must be specified in request.') — scope them to
-// the signed-in identity, which is what the UI means by "your approvals".
-function ownerParam() {
-  return _creds?.identityId ? { "owner-id": _creds.identityId } : {};
-}
-
-export async function listPendingApprovals({ limit = 25 } = {}) {
-  return req("GET", "/access-request-approvals/pending", { params: { limit, ...ownerParam() } });
-}
-
-export async function getPendingApprovalsCount() {
-  return getCount("/access-request-approvals/pending", ownerParam());
-}
-
-// "/approved" and "/rejected" don't exist as endpoints — completed approvals
-// (both APPROVED and REJECTED) live under a single "/completed" bucket,
-// distinguished by the item's "state" field.
-export async function listCompletedApprovals({ limit = 25 } = {}) {
-  return req("GET", "/access-request-approvals/completed", { params: { limit, ...ownerParam() } });
-}
-
-export async function approveRequest(approvalId, comment = "Approved via ISC app") {
-  return req("POST", `/access-request-approvals/${approvalId}/approve`, {
-    data: { comment },
-  });
-}
-
-// ─── Work items (pending manual tasks) ─────────────────────────────────────────
-// Ported from the server's own /api/work-items routes (lib/ported/workItems),
-// which wrap SailPoint's v3 Work Items API (GET /v3/work-items only ever
-// returns Pending items, so a completed one just stops appearing — no local
-// filtering needed).
-
-export async function listWorkItems() {
-  return PortedWorkItems.listWorkItems();
-}
-
-export async function getPendingWorkItemsCount() {
-  return (await PortedWorkItems.getPendingWorkItemsCount()).count;
-}
-
-export async function getWorkItem(id) {
-  return PortedWorkItems.getWorkItem(id);
-}
-
-export async function completeWorkItem(id) {
-  return PortedWorkItems.completeWorkItem(id);
-}
-
-export async function rejectRequest(approvalId, comment = "Rejected via ISC app") {
-  return req("POST", `/access-request-approvals/${approvalId}/reject`, {
-    data: { comment },
-  });
 }
 
 // ─── Roles & Access Profiles ─────────────────────────────────────────────────

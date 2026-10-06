@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Bell, RefreshCw, ChevronRight, Clock, CheckCircle2, AlertTriangle, Plus, ClipboardList, FileText } from "lucide-react";
+import { RefreshCw, ChevronRight, CheckCircle2, AlertTriangle, FileText } from "lucide-react";
 import {
-  getIdentitiesCount, getSourcesCount, getRolesCount, getPendingApprovalsCount,
-  listPendingApprovals, getRoleStatsSummary, listMyReports, getSchemaAnalysis, NO_ACCESS,
+  getIdentitiesCount, getSourcesCount, getRolesCount,
+  getRoleStatsSummary, listMyReports, getSchemaAnalysis, NO_ACCESS,
   getApiUsageCount, getBranding, fetchBrandingLogoObjectUrl,
 } from "../lib/sailpoint";
 import { useAuth } from "../hooks/useAuth";
 import { TopBar } from "../components/TopBar";
-import { MetricCard, SectionLabel, StatusBadge, SkeletonList, EmptyState, Spinner } from "../components/ui";
+import { MetricCard, SectionLabel, Spinner } from "../components/ui";
 import toast from "react-hot-toast";
 import { tenantUiHost } from "../lib/tenantHost";
 
@@ -86,8 +86,6 @@ export default function HomePage() {
   const ids = useQuery({ queryKey: ["identities-count"], queryFn: getIdentitiesCount });
   const srcs = useQuery({ queryKey: ["sources-count"], queryFn: getSourcesCount });
   const roles = useQuery({ queryKey: ["roles-count"], queryFn: getRolesCount });
-  const pending = useQuery({ queryKey: ["pending-approvals"], queryFn: () => listPendingApprovals({ limit: 5 }) });
-  const pendingCount = useQuery({ queryKey: ["pending-approvals-count"], queryFn: getPendingApprovalsCount });
   const roleStats = useQuery({ queryKey: ["role-stats-summary"], queryFn: getRoleStatsSummary });
   const myReports = useQuery({ queryKey: ["my-reports"], queryFn: listMyReports });
   const apiUsage = useQuery({ queryKey: ["api-usage-30d"], queryFn: () => getApiUsageCount({ days: 30 }) });
@@ -108,14 +106,13 @@ export default function HomePage() {
   }, [session?.tenant, schemaAnalysis.isSuccess, schemaAnalysis.data, navigate]);
 
   function refresh() {
-    ids.refetch(); srcs.refetch(); roles.refetch(); pending.refetch(); pendingCount.refetch();
+    ids.refetch(); srcs.refetch(); roles.refetch();
     roleStats.refetch(); myReports.refetch(); apiUsage.refetch(); branding.refetch();
     toast.success("Dashboard refreshed");
   }
 
   const myReportsCount = Array.isArray(myReports.data) ? myReports.data.length : 0;
 
-  const pendingList = Array.isArray(pending.data) ? pending.data : [];
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -135,20 +132,6 @@ export default function HomePage() {
       />
 
       <div className="flex-1 overflow-y-auto pb-24">
-        {/* Pending alert */}
-        {pendingCount.data > 0 && (
-          <div
-            className="mx-4 mt-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-3 cursor-pointer"
-            onClick={() => navigate("/approvals")}
-          >
-            <Bell size={16} className="text-amber-600 flex-shrink-0" />
-            <p className="text-sm text-amber-800 flex-1">
-              <span className="font-semibold">{pendingCount.data}</span> request{pendingCount.data !== 1 && "s"} awaiting your approval
-            </p>
-            <ChevronRight size={16} className="text-amber-500" />
-          </div>
-        )}
-
         {/* Metrics */}
         <SectionLabel>At a glance</SectionLabel>
         {/* Tenant-level row: API traffic and whose branding this tenant wears. */}
@@ -269,7 +252,6 @@ export default function HomePage() {
         <SectionLabel>Quick actions</SectionLabel>
         <div className="px-4 space-y-2">
           {[
-            { label: "New access request", sub: "Request roles or access profiles", icon: Plus, color: "bg-blue-50 text-blue-600", path: "/requests/new" },
             ...(myReportsCount > 0
               ? [{
                   label: `View my ${myReportsCount} report${myReportsCount === 1 ? "" : "s"}`,
@@ -297,34 +279,6 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Recent approvals */}
-        <SectionLabel>Pending approvals</SectionLabel>
-        <div className="border-t border-gray-100">
-          {pending.isLoading && <SkeletonList rows={3} />}
-          {!pending.isLoading && pendingList.length === 0 && (
-            <EmptyState icon={CheckCircle2} title="No pending approvals" subtitle="You're all caught up" />
-          )}
-          {pendingList.map((r) => {
-            const name = r.name || r.accessRequestId || "Access request";
-            const requester = r.requester?.name || "Unknown";
-            return (
-              <button
-                key={r.id}
-                onClick={() => navigate(`/approvals/${r.id}`)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 border-b border-gray-100 hover:bg-gray-50 text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
-                  <Clock size={16} className="text-amber-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">From {requester}</p>
-                </div>
-                <StatusBadge status="PENDING" />
-              </button>
-            );
-          })}
-        </div>
       </div>
     </div>
   );

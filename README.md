@@ -45,7 +45,7 @@ ISC App Shell ──postMessage──▶ Admin Studio (React, sandboxed iframe)
 | Area | State |
 |---|---|
 | Identities, roles (incl. dimensions, members, entitlements, propagation), sources (schemas, accounts, aggregation, identity profiles, apps, datasets, resources), connector customizers, Common Access flags, SOD mitigations, role evaluation | Ported to the client |
-| Remaining generic ISC pages (entitlements, access profiles, applications, workflows, forms, transforms, launchers, campaigns, approvals, tasks, etc.) | Work through `/api/isc` where they already did; routes with dedicated server logic still being ported |
+| Remaining generic ISC pages (entitlements, access profiles, applications, workflows, forms, transforms, launchers, campaigns, etc.) | Work through `/api/isc` where they already did; routes with dedicated server logic still being ported |
 | Role mining scans, skeleton scans, attribute sync, data segments, schema analysis, tenant settings, preferences, reports, backup and restore, parameters | Not yet ported. Calls return a "not yet available in the plugin" error (HTTP 501) |
 | AI-generated descriptions and workflow AI | Removed. The plugin CSP allows no outside calls |
 | LDAP lookups | Removed |
