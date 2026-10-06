@@ -8,6 +8,8 @@ module.exports = {
         include: /node_modules[\\/]@sailpoint/,
         resolve: { fullySpecified: false },
       });
+      // The SDK's maps point at TypeScript sources it doesn't ship.
+      config.ignoreWarnings = [...(config.ignoreWarnings || []), /Failed to parse source map/];
       return config;
     },
   },

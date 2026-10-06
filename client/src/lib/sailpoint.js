@@ -23,6 +23,7 @@ import * as PortedSchemas from "./ported/sourceSchemas";
 import * as PortedIdProfile from "./ported/sourceIdentityProfile";
 import * as PortedCustomizers from "./ported/connectorCustomizers";
 import * as identitiesPort from "./ported/identities";
+import * as PortedSettings from "./ported/settings";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -1197,33 +1198,21 @@ export async function getRolePropagationRunning() {
 // ─── Configuration: tenant settings ────────────────────────────────────────────
 
 export async function getTenantSettings() {
-  const resp = await axios.get(`${API_BASE}/api/insights/settings`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.getTenantSettings();
 }
 
 export async function setTenantSettings(settings) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/settings`,
-    settings,
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSettings.setTenantSettings(settings);
 }
 
 // ─── Studio Settings: Preferences ──────────────────────────────────────────
 
 export async function getStudioPreferences() {
-  const resp = await axios.get(`${API_BASE}/api/insights/studio-preferences`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.getStudioPreferences();
 }
 
 export async function setStudioPreferences(preferences) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/studio-preferences`,
-    preferences,
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSettings.setStudioPreferences(preferences);
 }
 
 // ─── User Preferences ──────────────────────────────────────────────────────
@@ -1233,13 +1222,11 @@ export async function setStudioPreferences(preferences) {
 // are shared tenant-wide.
 
 export async function getUserPreferences() {
-  const resp = await axios.get(`${API_BASE}/api/preferences`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.getUserPreferences();
 }
 
 export async function setUserPreferences(preferences) {
-  const resp = await axios.put(`${API_BASE}/api/preferences`, preferences, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.setUserPreferences(preferences);
 }
 
 // Runs the Role Statistics Refresh job immediately, as the signed-in user —
