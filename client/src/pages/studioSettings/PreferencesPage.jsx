@@ -91,10 +91,12 @@ function AnthropicKeySection({ session }) {
     },
   });
 
-  function submit(e) {
-    e.preventDefault();
+  // Not a <form>: the ISC App Shell runs the plugin in a sandboxed iframe
+  // without allow-forms, so a submit button there does nothing at all. The
+  // button and the Enter key call this directly instead.
+  function submit() {
     const key = draft.trim();
-    if (!key) return;
+    if (!key || save.isPending) return;
     save.mutate(key);
   }
 
@@ -117,12 +119,18 @@ function AnthropicKeySection({ session }) {
               </OutlineButton>
             </div>
           ) : (
-            <form onSubmit={submit} className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <div className="relative flex-1 min-w-0">
                 <input
                   type={show ? "text" : "password"}
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submit();
+                    }
+                  }}
                   placeholder="sk-ant-…"
                   autoComplete="off"
                   spellCheck={false}
@@ -139,7 +147,7 @@ function AnthropicKeySection({ session }) {
                   {show ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              <PrimaryButton type="submit" loading={save.isPending} disabled={!draft.trim()} className="!w-auto !py-2.5 !px-4">
+              <PrimaryButton type="button" onClick={submit} loading={save.isPending} disabled={!draft.trim()} className="!w-auto !py-2.5 !px-4">
                 Save to ISC
               </PrimaryButton>
               {stored && (
@@ -154,7 +162,7 @@ function AnthropicKeySection({ session }) {
                   Cancel
                 </OutlineButton>
               )}
-            </form>
+            </div>
           )}
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
           {setupNote && !error && <p className="text-xs text-green-700 mt-2">{setupNote}</p>}
