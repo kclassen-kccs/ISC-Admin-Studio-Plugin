@@ -329,7 +329,10 @@ export async function setStudioPreferences(body = {}) {
 const THEME_MODES = new Set(["system", "light", "dark"]);
 // Which view JSON editors open in; Text always works, Tree needs parseable JSON.
 const JSON_EDIT_MODES = new Set(["text", "tree"]);
-const DEFAULT_USER_PREFERENCES = { themeMode: "system", jsonEditMode: "text" };
+// How AI calls leave the plugin: through the tenant's "Admin Studio AI
+// Query" workflow (default) or straight from this browser with the saved key.
+const AI_ROUTES = new Set(["workflow", "direct"]);
+const DEFAULT_USER_PREFERENCES = { themeMode: "system", jsonEditMode: "text", aiRoute: "workflow" };
 
 // Older records hold only the darkMode boolean: true was a deliberate choice
 // ("dark"); false was also the default for anyone who never chose, so it maps
@@ -339,6 +342,7 @@ function normalizeUserPreferences(stored) {
   // Test the STORED mode: the merged one always looks valid thanks to the default.
   if (!THEME_MODES.has(stored?.themeMode)) prefs.themeMode = stored?.darkMode === true ? "dark" : "system";
   if (!JSON_EDIT_MODES.has(prefs.jsonEditMode)) prefs.jsonEditMode = "text";
+  if (!AI_ROUTES.has(prefs.aiRoute)) prefs.aiRoute = "workflow";
   prefs.darkMode = prefs.themeMode === "dark"; // kept so an older client reads something sensible
   if (typeof prefs.anthropicApiKey !== "string" || !prefs.anthropicApiKey) delete prefs.anthropicApiKey;
   return prefs;
@@ -381,6 +385,15 @@ export async function getUserPreferences() {
   return withoutSecrets(await readUserPreferences());
 }
 
+/** "workflow" or "direct"; "workflow" when there is no session yet. */
+export async function getAiRoute() {
+  try {
+    return (await readUserPreferences()).aiRoute;
+  } catch {
+    return "workflow";
+  }
+}
+
 /** The stored Anthropic API key, or null. For the AI client only; never log it. */
 export async function getAnthropicApiKey() {
   try {
@@ -395,8 +408,12 @@ export async function getAnthropicApiKey() {
  * `anthropicApiKey`: a string stores it, "" or null removes it.
  */
 export async function setUserPreferences(body = {}) {
-  const { themeMode, darkMode, jsonEditMode, anthropicApiKey } = body;
+  const { themeMode, darkMode, jsonEditMode, anthropicApiKey, aiRoute } = body;
   const patch = {};
+  if (aiRoute !== undefined) {
+    if (!AI_ROUTES.has(aiRoute)) throw badRequest('aiRoute must be "workflow" or "direct".');
+    patch.aiRoute = aiRoute;
+  }
   if (anthropicApiKey !== undefined) {
     if (anthropicApiKey !== null && typeof anthropicApiKey !== "string") throw badRequest("anthropicApiKey must be a string.");
     const key = (anthropicApiKey || "").trim();

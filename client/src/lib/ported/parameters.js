@@ -106,7 +106,15 @@ export async function createParameter(input) {
         resp = await post(body);
       }
     } else {
-      resp = await post(body);
+      try {
+        resp = await post(body);
+      } catch (err) {
+        // Connection-type parameters (2.x, no private fields) are refused with
+        // a bare "validation error" unless privateFields carries an encrypted
+        // empty object, which is what the ISC UI sends.
+        if (err.response?.status !== 400) throw err;
+        resp = await sendSecret({}, (jwe) => post({ ...body, privateFields: jwe }));
+      }
     }
     return { ...resp.data, ...(secretNotSaved ? { _secretNotSaved: secretNotSaved } : {}) };
   } catch (err) {

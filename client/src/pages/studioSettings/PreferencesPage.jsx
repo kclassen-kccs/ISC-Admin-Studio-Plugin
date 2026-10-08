@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Monitor, Sun, Moon, Wand2, Check, AlignLeft, ListTree, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Settings, Monitor, Sun, Moon, Wand2, Check, AlignLeft, ListTree, KeyRound, Eye, EyeOff, Workflow, Globe } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
@@ -43,6 +43,16 @@ const THEME_OPTIONS = [
 const JSON_MODE_OPTIONS = [
   { value: "text", label: "Text", hint: "The raw JSON, with find & replace", Icon: AlignLeft },
   { value: "tree", label: "Tree", hint: "Expandable fields, edited in place", Icon: ListTree },
+];
+
+// How the AI features reach Claude. "workflow" runs the tenant's "Admin
+// Studio AI Query" workflow, which holds the key in ISC Parameter Storage and
+// makes the outbound call on the plugin's behalf; "direct" calls
+// api.anthropic.com from this browser with the key saved below, which ISC's
+// plugin policy blocks today but is kept for when it doesn't.
+const AI_ROUTE_OPTIONS = [
+  { value: "workflow", label: "ISC workflow", hint: "Runs the \"Admin Studio AI Query\" workflow on this tenant; the key stays in ISC Parameter Storage", Icon: Workflow },
+  { value: "direct", label: "Direct from this browser", hint: "Uses the Anthropic API key saved below; ISC doesn't yet allow this call from a plugin", Icon: Globe },
 ];
 
 // The Anthropic API key powers the AI features (descriptions, role evaluation
@@ -137,9 +147,9 @@ function AnthropicKeySection({ prefs, onSaved }) {
           )}
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
           <p className="text-xs text-gray-400 mt-3">
-            Used by the AI features (descriptions, role evaluation review, workflow drafting). The key is kept only in this
-            browser and is sent only to api.anthropic.com. ISC does not yet let plugins make that call, so AI stays
-            unavailable until it does.
+            Used only by the &quot;Direct from this browser&quot; AI route. The key is kept only in this browser and is
+            sent only to api.anthropic.com. ISC does not yet let plugins make that call; the ISC workflow route works
+            today.
           </p>
         </div>
       </div>
@@ -153,6 +163,15 @@ export default function PreferencesPage() {
   const [autoConvertOpen, setAutoConvertOpen] = useState(false);
   const queryClient = useQueryClient();
   const prefs = useQuery({ queryKey: ["user-preferences"], queryFn: getUserPreferences, enabled: !!session, staleTime: Infinity });
+  const aiRoute = prefs.data?.aiRoute || "workflow";
+  const saveAiRoute = useMutation({
+    mutationFn: (route) => setUserPreferences({ aiRoute: route }),
+    onSuccess: (next) => queryClient.setQueryData(["user-preferences"], next),
+  });
+  function chooseAiRoute(next) {
+    queryClient.setQueryData(["user-preferences"], (cur) => ({ ...(cur || {}), aiRoute: next }));
+    saveAiRoute.mutate(next);
+  }
 
   const saveThemeMode = useMutation({
     mutationFn: (themeMode) => setUserPreferences({ themeMode }),
@@ -224,6 +243,31 @@ export default function PreferencesPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        <SectionLabel bold>AI Route</SectionLabel>
+        <div className="px-4">
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            {AI_ROUTE_OPTIONS.map(({ value, label, hint, Icon }, i) => (
+              <button
+                key={value}
+                onClick={() => chooseAiRoute(value)}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${i > 0 ? "border-t border-gray-100" : ""}`}
+                aria-pressed={aiRoute === value}
+              >
+                <Icon size={16} className="text-gray-400 flex-shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="text-sm text-gray-700 block">{label}</span>
+                  <span className="text-xs text-gray-400 block">{hint}</span>
+                </span>
+                {aiRoute === value && <Check size={16} className="text-blue-600 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">
+            The workflow reads its URL from the &quot;Admin Studio AI Connection&quot; parameter and its key from
+            &quot;Admin Studio AI Key&quot;; set the key&apos;s header value in ISC Parameter Storage.
+          </p>
         </div>
 
         <AnthropicKeySection prefs={prefs.data} onSaved={(next) => queryClient.setQueryData(["user-preferences"], next)} />

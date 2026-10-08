@@ -1750,9 +1750,14 @@ Certifications, Preferences.
   PDF" and Close.
 - **Appearance** — System (default, follows the OS), Light, or Dark.
   Per-user, server-side, syncs across devices.
-- **Anthropic API Key** — the key the AI features (descriptions, role
-  evaluation review, workflow drafting) use to call api.anthropic.com
-  directly from the browser. Entered masked (eye toggle to reveal while
+- **AI Route** — ISC workflow (default) or Direct from this browser. The
+  workflow route runs the tenant's "Admin Studio AI Query" workflow, which
+  takes its URL from the "Admin Studio AI Connection" parameter and its
+  key from the "Admin Studio AI Key" parameter in ISC Parameter Storage, so
+  no key is in the browser (see isc/README.md). Per-user.
+- **Anthropic API Key** — used by the Direct route only: the key the AI
+  features (descriptions, role evaluation review, workflow drafting) use to
+  call api.anthropic.com directly from the browser. Entered masked (eye toggle to reveal while
   typing); once saved it shows only as prefix + last four with Change /
   Remove, and can't be read back. Stored only in this browser's
   preferences, never in the bundle, never sent to ISC. ISC's plugin
