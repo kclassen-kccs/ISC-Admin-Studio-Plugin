@@ -24,6 +24,36 @@ import * as PortedIdProfile from "./ported/sourceIdentityProfile";
 import * as PortedCustomizers from "./ported/connectorCustomizers";
 import * as identitiesPort from "./ported/identities";
 import * as PortedAi from "./ported/aiDescriptions";
+import * as PortedSettings from "./ported/settings";
+import * as PortedSegments from "./ported/segments";
+import * as PortedIdentityProfiles from "./ported/identityProfiles";
+import * as PortedWorkgroups from "./ported/workgroups";
+import * as PortedLaunchers from "./ported/launchers";
+import * as PortedTenantInfo from "./ported/tenantInfo";
+import * as PortedEntitlements from "./ported/entitlements";
+import * as PortedAccessProfiles from "./ported/accessProfiles";
+import * as PortedMetadata from "./ported/metadataTagging";
+import * as PortedWorkflows from "./ported/workflows";
+import * as PortedJsonEdit from "./ported/jsonEdit";
+import * as PortedReports from "./ported/reports";
+import * as PortedCampaignReports from "./ported/campaignReports";
+import * as PortedSpConfig from "./ported/spConfig";
+import * as PortedRoleEvalScans from "./ported/roleEvalScans";
+import * as PortedCertRuns from "./ported/certificationRuns";
+import * as PortedSkeletonScans from "./ported/skeletonScans";
+import * as PortedDlScans from "./ported/dlScans";
+import * as PortedAttributeSyncScans from "./ported/attributeSyncScans";
+import * as PortedRoleScans from "./ported/roleScans";
+import * as PortedSchemaAnalysis from "./ported/schemaAnalysis";
+import * as PortedRoleStats from "./ported/roleStats";
+import * as PortedSegmentRoleMatches from "./ported/segmentRoleMatches";
+import * as PortedSegmentScans from "./ported/segmentScans";
+import * as PortedAccessSegmentScans from "./ported/accessSegmentScans";
+import * as PortedParameters from "./ported/parameters";
+import * as PortedOpsSuggestions from "./ported/opsSuggestions";
+import * as PortedJsonRepair from "./ported/jsonRepair";
+import * as AiSetup from "./aiSetup";
+import * as PortedWorkflowAi from "./ported/workflowAi";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -168,19 +198,17 @@ export async function listIdentitiesPage(params) {
 // populate the Identities list's Identity Profile filter pill directly —
 // not derived by scanning identities for the profiles they happen to use.
 export async function listIdentityProfiles() {
-  const resp = await axios.get(`${API_BASE}/api/identity-profiles`, { headers: authHeaders() });
-  return sortByName(resp.data);
+  return sortByName(await PortedIdentityProfiles.listIdentityProfiles());
 }
 
 // ISC's "Apply Changes" — re-evaluates every identity under the profile
 // against its current mappings. Asynchronous: resolves once ISC accepts it.
 export async function processIdentityProfile(id) {
-  const resp = await axios.post(`${API_BASE}/api/identity-profiles/${id}/process-identities`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedIdentityProfiles.processIdentityProfile(id);
 }
 
 export async function deleteIdentityProfile(id) {
-  await axios.delete(`${API_BASE}/api/identity-profiles/${id}`, { headers: authHeaders() });
+  await PortedIdentityProfiles.deleteIdentityProfile(id);
 }
 
 export async function getIdentity(id) {
@@ -288,8 +316,7 @@ export async function listEntitlementMembers(entitlementId, { limit = 50, offset
 // when @access() search finds nobody (fresh delimited-source grants that
 // haven't been indexed yet). Returns { members, total, uncorrelated }.
 export async function listEntitlementAccountMembers(entitlementId) {
-  const resp = await axios.get(`${API_BASE}/api/entitlements/${entitlementId}/account-members`, { headers: authHeaders() });
-  return resp.data;
+  return PortedEntitlements.listEntitlementAccountMembers(entitlementId);
 }
 
 // Global Access Model Metadata attributes and their registered values.
@@ -306,8 +333,7 @@ export async function listMetadataAttributeValues(key) {
 // Assign / remove one metadata value on an entitlement (server handles the
 // v2026->beta root probe and ad-hoc value registration).
 export async function addEntitlementMetadata(entitlementId, { key, value, name }) {
-  const resp = await axios.post(`${API_BASE}/api/entitlements/${entitlementId}/metadata`, { key, value, name }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.addEntitlementMetadata(entitlementId, { key, value, name });
 }
 // Workflow action schemas — every action's typed input fields (formFields),
 // the same schema SailPoint's own builder renders from. Cached per session.
@@ -334,22 +360,18 @@ export async function listAdOus(sourceId) {
   return PortedSources.listAdOus(sourceId);
 }
 export async function startDlScan({ targetType, sourceId, sourceName, ou }) {
-  const resp = await axios.post(`${API_BASE}/api/insights/dl-scans`, { targetType, sourceId, sourceName, ou }, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.startDlScan({ targetType, sourceId, sourceName, ou });
 }
 export async function getDlScan(id) {
-  const resp = await axios.get(`${API_BASE}/api/insights/dl-scans/${id}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.getDlScan(id);
 }
 export async function createDlGroups(id, suggestionIds) {
-  const resp = await axios.post(`${API_BASE}/api/insights/dl-scans/${id}/create`, { suggestionIds }, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.createDlGroups(id, suggestionIds);
 }
 // After the groups exist and aggregation ran: attach each DL entitlement to
 // its matching mined role so role membership provisions the DL's members.
 export async function addDlGroupsToRoles(id, suggestionIds) {
-  const resp = await axios.post(`${API_BASE}/api/insights/dl-scans/${id}/add-to-roles`, { suggestionIds }, { headers: authHeaders() });
-  return resp.data;
+  return PortedDlScans.addDlGroupsToRoles(id, suggestionIds);
 }
 
 // Assign / remove one metadata value on a role, access profile or
@@ -357,12 +379,10 @@ export async function addDlGroupsToRoles(id, suggestionIds) {
 // server registers an ad-hoc value first when `name` is given, and probes
 // which API root serves the per-item route on this tenant.
 export async function addObjectMetadata(kind, id, { key, value, name }) {
-  const resp = await axios.post(`${API_BASE}/api/${kind}/${id}/metadata`, { key, value, name }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.addObjectMetadata(kind, id, { key, value, name });
 }
 export async function removeObjectMetadata(kind, id, key, value) {
-  const resp = await axios.delete(`${API_BASE}/api/${kind}/${id}/metadata/${encodeURIComponent(key)}/${encodeURIComponent(value)}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.removeObjectMetadata(kind, id, key, value);
 }
 
 // Adds one metadata value to — or removes it from — every listed object.
@@ -370,22 +390,16 @@ export async function removeObjectMetadata(kind, id, key, value) {
 // "remove". { done, skipped, failed: [{ id, error }] } — on remove, objects
 // that don't carry the value are `skipped`, not failed.
 export async function bulkTagMetadata(kind, { operation, key, value, name, ids }) {
-  const resp = await axios.post(`${API_BASE}/api/${kind}/metadata/bulk-tag`, { operation, key, value, name, ids }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.bulkTagMetadata(kind, { operation, key, value, name, ids });
 }
 
 // Tag many entitlements with one metadata value in a single server call.
 export async function bulkTagEntitlementMetadata({ key, value, name, entitlementIds }) {
-  const resp = await axios.post(`${API_BASE}/api/entitlements/metadata/bulk`, { key, value, name, entitlementIds }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.bulkTagEntitlementMetadata({ key, value, name, entitlementIds });
 }
 
 export async function removeEntitlementMetadata(entitlementId, key, value) {
-  const resp = await axios.delete(
-    `${API_BASE}/api/entitlements/${entitlementId}/metadata/${encodeURIComponent(key)}/${encodeURIComponent(value)}`,
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedMetadata.removeEntitlementMetadata(entitlementId, key, value);
 }
 
 // Same reasoning as listEntitlementMembers — /v2026/roles and
@@ -498,8 +512,7 @@ export async function getEntitlementsCount({ query, sourceId, ownerId, requestab
 // entitlement against apps-on-this-entitlement's-source, rather than
 // something reachable as a plain filter.
 export async function listEntitlementApplications(entitlementId) {
-  const resp = await axios.get(`${API_BASE}/api/entitlements/${entitlementId}/applications`, { headers: authHeaders() });
-  return resp.data;
+  return PortedEntitlements.listEntitlementApplications(entitlementId);
 }
 
 // Hierarchical entitlements (e.g. nested AD groups via memberOf) — ISC's
@@ -515,8 +528,7 @@ export async function listEntitlementChildren(entitlementId) {
 
 // fields: any of { name, description, owner: {id,name}, requestable }
 export async function updateEntitlement(id, fields) {
-  const resp = await axios.patch(`${API_BASE}/api/entitlements/${id}`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedEntitlements.updateEntitlement(id, fields);
 }
 
 // Returns a suggested description only — never writes to the entitlement
@@ -725,22 +737,10 @@ export async function updateSourceProvisioningPolicy(sourceId, usageType, body) 
 // Detail Report print fires both for every listed role in quick succession.
 export async function getEntitlementsByIds(ids) {
   if (!ids.length) return [];
-  const resp = await axios.get(`${API_BASE}/api/entitlements/by-ids`, {
-    params: { ids: ids.join(",") },
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedEntitlements.getEntitlementsByIds(ids);
 }
 
-// ─── Access Requests ──────────────────────────────────────────────────────────
-
-export async function listAccessRequests({ limit = 25 } = {}) {
-  // /access-requests only accepts POST (create); listing is /access-request-status.
-  // It has no status filter, so status filtering happens client-side.
-  return req("GET", "/access-request-status", {
-    params: { limit, "requested-for": "me" },
-  });
-}
+// ─── Access Requests (grant/revoke from a role or access profile) ─────────────
 
 export async function submitAccessRequest({ requestedFor, itemId, itemType, comment, requestType = "GRANT_ACCESS" }) {
   return req("POST", "/access-requests", {
@@ -759,75 +759,6 @@ export async function submitAccessRequest({ requestedFor, itemId, itemType, comm
 // depending on the item's own revocationRequestConfig, same as granting.
 export async function revokeAccessRequest({ requestedFor, itemId, itemType, comment }) {
   return submitAccessRequest({ requestedFor, itemId, itemType, comment, requestType: "REVOKE_ACCESS" });
-}
-
-export async function cancelAccessRequest(requestId, comment = "Cancelled via mobile app") {
-  return req("POST", "/access-requests/cancel", {
-    data: { accountActivityId: requestId, comment },
-  });
-}
-
-// ─── Approvals ────────────────────────────────────────────────────────────────
-
-// Approval endpoints require an explicit "owner-id" for non-admin user
-// tokens ('"owner-id" fields must be specified in request.') — scope them to
-// the signed-in identity, which is what the UI means by "your approvals".
-function ownerParam() {
-  return _creds?.identityId ? { "owner-id": _creds.identityId } : {};
-}
-
-export async function listPendingApprovals({ limit = 25 } = {}) {
-  return req("GET", "/access-request-approvals/pending", { params: { limit, ...ownerParam() } });
-}
-
-export async function getPendingApprovalsCount() {
-  return getCount("/access-request-approvals/pending", ownerParam());
-}
-
-// "/approved" and "/rejected" don't exist as endpoints — completed approvals
-// (both APPROVED and REJECTED) live under a single "/completed" bucket,
-// distinguished by the item's "state" field.
-export async function listCompletedApprovals({ limit = 25 } = {}) {
-  return req("GET", "/access-request-approvals/completed", { params: { limit, ...ownerParam() } });
-}
-
-export async function approveRequest(approvalId, comment = "Approved via ISC app") {
-  return req("POST", `/access-request-approvals/${approvalId}/approve`, {
-    data: { comment },
-  });
-}
-
-// ─── Work items (pending manual tasks) ─────────────────────────────────────────
-// Not ISC passthroughs — hit the server's own /api/work-items routes, which
-// proxy SailPoint's v3 Work Items API (GET /v3/work-items only ever returns
-// Pending items, so a completed one just stops appearing — no local
-// filtering needed). Completion calls SailPoint's documented
-// POST /v3/work-items/:id/complete.
-
-export async function listWorkItems() {
-  const resp = await axios.get(`${API_BASE}/api/work-items`, { headers: authHeaders() });
-  return resp.data;
-}
-
-export async function getPendingWorkItemsCount() {
-  const resp = await axios.get(`${API_BASE}/api/work-items/pending-count`, { headers: authHeaders() });
-  return resp.data.count;
-}
-
-export async function getWorkItem(id) {
-  const resp = await axios.get(`${API_BASE}/api/work-items/${id}`, { headers: authHeaders() });
-  return resp.data;
-}
-
-export async function completeWorkItem(id) {
-  const resp = await axios.post(`${API_BASE}/api/work-items/${id}/complete`, {}, { headers: authHeaders() });
-  return resp.data;
-}
-
-export async function rejectRequest(approvalId, comment = "Rejected via ISC app") {
-  return req("POST", `/access-request-approvals/${approvalId}/reject`, {
-    data: { comment },
-  });
 }
 
 // ─── Roles & Access Profiles ─────────────────────────────────────────────────
@@ -888,28 +819,24 @@ export async function getIdentityEmail(id) {
 // Roles list's Email Report action instead of an attachment, since
 // mailto: links can't carry one.
 export async function createRoleReport({ filename, pdfBase64 }) {
-  const resp = await axios.post(`${API_BASE}/api/role-reports`, { filename, pdfBase64 }, { headers: authHeaders() });
-  return resp.data;
+  return PortedReports.createRoleReport({ filename, pdfBase64 });
 }
 
 // Saves a private, per-user copy of a generated PDF — shown on the
 // signed-in user's own "My Reports" list (see server's POST /api/reports).
 export async function saveReport({ filename, title, pdfBase64 }) {
-  const resp = await axios.post(`${API_BASE}/api/reports`, { filename, title, pdfBase64 }, { headers: authHeaders() });
-  return resp.data;
+  return PortedReports.saveReport({ filename, title, pdfBase64 });
 }
 
 export async function listMyReports() {
-  const resp = await axios.get(`${API_BASE}/api/reports`, { headers: authHeaders() });
-  return resp.data;
+  return PortedReports.listMyReports();
 }
 
 // Fetched as a blob rather than opened by bare URL — the route requires
 // the x-sp-session header, which a plain <a href>/window.open(url) can't
 // send (unlike the public role-reports links, which need no auth).
 export async function getReportBlob(id) {
-  const resp = await axios.get(`${API_BASE}/api/reports/${id}`, { headers: authHeaders(), responseType: "blob" });
-  return resp.data;
+  return PortedReports.getReportBlob(id);
 }
 
 // Creates and activates one ROLE_COMPOSITION certification campaign per
@@ -988,22 +915,15 @@ export async function removeRoleSodMitigation(roleId, mitigationId) {
 // Tenant-wide mitigation list/edit/delete — backs Evaluation Config's
 // "Manage Mitigations" screen, not scoped to one role's evaluation sheet.
 export async function listTenantSodMitigations() {
-  const resp = await axios.get(`${API_BASE}/api/insights/sod-mitigations`, { headers: authHeaders() });
-  return sortByName(resp.data, ["roleName", "policyName"]);
+  return sortByName(await PortedRoleEvaluation.listTenantSodMitigations(), ["roleName", "policyName"]);
 }
 
 export async function updateSodMitigation(mitigationId, { expiresAt }) {
-  const resp = await axios.patch(
-    `${API_BASE}/api/insights/sod-mitigations/${mitigationId}`,
-    { expiresAt },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvaluation.updateSodMitigation(mitigationId, { expiresAt });
 }
 
 export async function deleteSodMitigation(mitigationId) {
-  const resp = await axios.delete(`${API_BASE}/api/insights/sod-mitigations/${mitigationId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleEvaluation.deleteSodMitigation(mitigationId); // { ok: true }
 }
 
 // { commonAccess: boolean, status: "CONFIRMED" | "DENIED" | null }
@@ -1181,33 +1101,21 @@ export async function getRolePropagationRunning() {
 // ─── Configuration: tenant settings ────────────────────────────────────────────
 
 export async function getTenantSettings() {
-  const resp = await axios.get(`${API_BASE}/api/insights/settings`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.getTenantSettings();
 }
 
 export async function setTenantSettings(settings) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/settings`,
-    settings,
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSettings.setTenantSettings(settings);
 }
 
 // ─── Studio Settings: Preferences ──────────────────────────────────────────
 
 export async function getStudioPreferences() {
-  const resp = await axios.get(`${API_BASE}/api/insights/studio-preferences`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.getStudioPreferences();
 }
 
 export async function setStudioPreferences(preferences) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/studio-preferences`,
-    preferences,
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSettings.setStudioPreferences(preferences);
 }
 
 // ─── User Preferences ──────────────────────────────────────────────────────
@@ -1217,28 +1125,24 @@ export async function setStudioPreferences(preferences) {
 // are shared tenant-wide.
 
 export async function getUserPreferences() {
-  const resp = await axios.get(`${API_BASE}/api/preferences`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.getUserPreferences();
 }
 
 export async function setUserPreferences(preferences) {
-  const resp = await axios.put(`${API_BASE}/api/preferences`, preferences, { headers: authHeaders() });
-  return resp.data;
+  return PortedSettings.setUserPreferences(preferences);
 }
 
 // Runs the Role Statistics Refresh job immediately, as the signed-in user —
 // counts toward the Home screen's stats the same as a real scheduled run.
 export async function runRoleStatsRefreshNow() {
-  const resp = await axios.post(`${API_BASE}/api/insights/role-stats-refresh/run-now`, {}, { headers: authHeaders() });
-  return resp.data; // { scanId }
+  return PortedRoleStats.runRoleStatsRefreshNow(); // { scanId }
 }
 
 // The Home screen's pass/needs-update role counts, from the most recent
 // completed Role Statistics Refresh scan — { available: false } if none has
 // ever run.
 export async function getRoleStatsSummary() {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-stats-summary`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleStats.getRoleStatsSummary();
 }
 
 // Runs a raw ISC Search query (identities index) and returns how many
@@ -1271,11 +1175,7 @@ export async function listRoleDimensions(roleId) {
 // has branding configured, so each returns an "unavailable" shape the card
 // can render instead of breaking the whole dashboard.
 export async function getApiUsageCount({ days = 30 } = {}) {
-  const resp = await axios.get(`${API_BASE}/api/dashboard/api-usage`, {
-    params: { days },
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedTenantInfo.getApiUsageCount({ days });
 }
 
 // The tenant's instance badge (Sandbox / Production / ...). Lives on the UI
@@ -1285,30 +1185,22 @@ export async function getApiUsageCount({ days = 30 } = {}) {
 // segment's ROLE filter (which ISC records by GUID) can be shown by name.
 // { byGuid: { "<guid>": { key, value, name } } }.
 export async function getMetadataValueGuids() {
-  const resp = await axios.get(`${API_BASE}/api/metadata-value-guids`, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.getMetadataValueGuids();
 }
 
 export async function getTenantUiMetadata() {
-  const resp = await axios.get(`${API_BASE}/api/tenant-ui-metadata`, { headers: authHeaders() });
-  return resp.data;
+  return PortedTenantInfo.getTenantUiMetadata();
 }
 
 export async function getBranding() {
-  const resp = await axios.get(`${API_BASE}/api/dashboard/branding`, { headers: authHeaders() });
-  return resp.data;
+  return PortedTenantInfo.getBranding();
 }
 
-// The logo streams through our own server (the ISC URL needs the tenant
-// token). Auth here is the x-sp-session HEADER, which an <img src> can't
-// send — so the image is fetched as a blob and handed to the tag as an
-// object URL. Callers must revoke it when they're done with it.
+// The ISC logo URL needs the tenant token, which an <img src> can't send —
+// so the image is fetched as a blob (with the plugin's token) and handed to
+// the tag as an object URL. Callers must revoke it when they're done with it.
 export async function fetchBrandingLogoObjectUrl() {
-  const resp = await axios.get(`${API_BASE}/api/dashboard/branding/logo`, {
-    headers: authHeaders(),
-    responseType: "blob",
-  });
-  return URL.createObjectURL(resp.data);
+  return URL.createObjectURL(await PortedTenantInfo.fetchBrandingLogoBlob());
 }
 
 // Matches listRoles: total roles, not just requestable ones.
@@ -1339,12 +1231,7 @@ export async function getAccessProfile(id) {
 // doesn't collect either, matching new access profiles starting
 // inactive/non-requestable until deliberately turned on.
 export async function createAccessProfile({ name, owner, sourceId, entitlementIds }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/access-profiles`,
-    { name, owner, sourceId, entitlementIds },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAccessProfiles.createAccessProfile({ name, owner, sourceId, entitlementIds });
 }
 
 // Verified live: DELETE /v2026/access-profiles/:id is a real endpoint (404
@@ -1355,18 +1242,12 @@ export async function deleteAccessProfile(id) {
 }
 
 export async function setAccessProfileEnabled(id, enabled) {
-  const resp = await axios.patch(
-    `${API_BASE}/api/access-profiles/${id}/enabled`,
-    { enabled },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAccessProfiles.setAccessProfileEnabled(id, enabled);
 }
 
 // fields: any of { name, description, owner: {id,name} }
 export async function updateAccessProfile(id, fields) {
-  const resp = await axios.patch(`${API_BASE}/api/access-profiles/${id}`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessProfiles.updateAccessProfile(id, fields);
 }
 
 // Returns a suggested description only — never writes to the access
@@ -1465,12 +1346,7 @@ export async function updateSourceAppAccessProfiles(appId, { add, remove }) {
 
 // add: [{id,name}, ...], remove: [entitlementId, ...]
 export async function updateAccessProfileEntitlements(id, { add, remove }) {
-  const resp = await axios.patch(
-    `${API_BASE}/api/access-profiles/${id}/entitlements`,
-    { add, remove },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAccessProfiles.updateAccessProfileEntitlements(id, { add, remove });
 }
 
 // ─── Sources ─────────────────────────────────────────────────────────────────
@@ -1557,8 +1433,12 @@ async function getCountOrNoAccess(path, params) {
   }
 }
 
+// /identities, not /public-identities: the latter counts every account-level
+// record the search index holds (over 15k on a tenant with 354 identities),
+// while /identities is the tenant's identities and leaves out SailPoint's own
+// slpt.* service identities that even the search index includes.
 export async function getIdentitiesCount() {
-  return getCountOrNoAccess("/public-identities");
+  return getCountOrNoAccess("/identities");
 }
 
 export async function getSourcesCount() {
@@ -1583,33 +1463,22 @@ export async function listSodViolations({ limit = 20 } = {}) {
 
 // ─── Configuration: schema analysis ────────────────────────────────────────────
 
-// Not an ISC passthrough — hits the server's own analysis endpoint directly.
-// Runs fresh and persists (and returns) the result for the current tenant.
+// Not an ISC passthrough — runs the analysis in the browser (ported from the
+// server). Runs fresh and persists (and returns) the result for the current tenant.
 export async function runSchemaAnalysis() {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/schema-analysis`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSchemaAnalysis.runSchemaAnalysis();
 }
 
 // The persisted result for the current tenant, or null if none has run yet.
 export async function getSchemaAnalysis() {
-  const resp = await axios.get(`${API_BASE}/api/insights/schema-analysis`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSchemaAnalysis.getSchemaAnalysis();
 }
 
-// Overrides the algorithm's top-3 pick with a manually chosen, ordered list
-// (first = highest priority). 1 to 3 keys, each must be one of this
+// Overrides the algorithm's top pick with a manually chosen, ordered list
+// (first = highest priority). 1 to 2 keys, each must be one of this
 // analysis's candidates.
 export async function setSchemaTopAttributes(topAttributes) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/schema-analysis/top-attributes`,
-    { topAttributes },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSchemaAnalysis.setSchemaTopAttributes(topAttributes);
 }
 
 // Persists the Multi-Company/Division Boundary — whether it's on, and
@@ -1617,24 +1486,17 @@ export async function setSchemaTopAttributes(topAttributes) {
 // sibling toggle (only meaningful, and only ever persisted true, while
 // enabled is also true) that also gates the Data Segments menu.
 export async function setSchemaRoleBoundary({ enabled, attributes, createDataSegments }) {
-  const resp = await axios.put(
-    `${API_BASE}/api/insights/schema-analysis/role-boundary`,
-    { enabled, attributes, createDataSegments },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedSchemaAnalysis.setSchemaRoleBoundary({ enabled, attributes, createDataSegments });
 }
 
 // ─── Data Segments ──────────────────────────────────────────────────────────
 
 export async function listSegments() {
-  const resp = await axios.get(`${API_BASE}/api/segments`, { headers: authHeaders() });
-  return sortByName(resp.data);
+  return sortByName(await PortedSegments.listSegments());
 }
 
 export async function getSegment(id) {
-  const resp = await axios.get(`${API_BASE}/api/segments/${id}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getSegment(id);
 }
 
 /**
@@ -1646,8 +1508,7 @@ export async function getSegment(id) {
  * the paths it arrived by.
  */
 export async function getSegmentAccess(id) {
-  const resp = await axios.get(`${API_BASE}/api/segments/${id}/access`, { headers: authHeaders() });
-  const d = resp.data || {};
+  const d = (await PortedSegments.getSegmentAccess(id)) || {};
   return { ...d, roles: sortByName(d.roles), accessProfiles: sortByName(d.accessProfiles), entitlements: sortByName(d.entitlements) };
 }
 
@@ -1656,11 +1517,7 @@ export async function getSegmentAccess(id) {
 // denormalizes segment membership anywhere. Same { members, total } shape
 // as listEntitlementMembers.
 export async function listSegmentMembers(id, { limit = 50, offset = 0, query } = {}) {
-  const resp = await axios.get(`${API_BASE}/api/segments/${id}/members`, {
-    params: { limit, offset, query: query || undefined },
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedSegments.listSegmentMembers(id, { limit, offset, query });
 }
 
 // The reverse direction of getSegmentAccess — given an identity/role/
@@ -1675,37 +1532,32 @@ export async function getIdentitySegments(identityId) {
 }
 
 export async function getRoleSegments(roleId) {
-  const resp = await axios.get(`${API_BASE}/api/roles/${roleId}/segments`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getRoleSegments(roleId);
 }
 
 export async function getEntitlementSegments(entitlementId) {
-  const resp = await axios.get(`${API_BASE}/api/entitlements/${entitlementId}/segments`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.getEntitlementSegments(entitlementId);
 }
 
 export async function deleteSegment(id) {
-  await axios.delete(`${API_BASE}/api/segments/${id}`, { headers: authHeaders() });
+  await PortedSegments.deleteSegment(id);
 }
 
 export async function setSegmentActive(id, active) {
-  const resp = await axios.patch(`${API_BASE}/api/segments/${id}/active`, { active }, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.setSegmentActive(id, active);
 }
 
 // Ensures this segment has an editable draft, creating one (copied from
 // the published record) if it doesn't already have one. A no-op — not an
 // error — if it's already a draft or already has one.
 export async function createSegmentDraft(id) {
-  const resp = await axios.post(`${API_BASE}/api/segments/${id}/create-draft`, {}, { headers: authHeaders() });
-  return resp.data; // { draftId, segmentName, created, wasAlreadyDraft }
+  return PortedSegments.createSegmentDraft(id); // { draftId, segmentName, created, wasAlreadyDraft }
 }
 
 // A segment's criteria has no effect on real identities until published —
 // enabled alone isn't enough.
 export async function publishSegments(ids) {
-  const resp = await axios.post(`${API_BASE}/api/segments/publish`, { ids }, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegments.publishSegments(ids);
 }
 
 // "Assign Matching Roles" — proposes which existing roles AND entitlements
@@ -1715,39 +1567,23 @@ export async function publishSegments(ids) {
 // writing anything. Poll getSegmentRoleMatch for progress/results — each
 // result carries `matches` (roles) and `entitlementMatches`.
 export async function startSegmentRoleMatch(segmentIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-role-matches`,
-    { segmentIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { matchId }
+  return PortedSegmentRoleMatches.startSegmentRoleMatch(segmentIds); // { matchId }
 }
 
 export async function getSegmentRoleMatch(matchId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-role-matches/${matchId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentRoleMatches.getSegmentRoleMatch(matchId);
 }
 
 // items: [{ segmentId, type: "ROLE" | "ENTITLEMENT", id }, ...] — assigns
 // each accepted suggestion. type defaults to ROLE if omitted.
 export async function assignSegmentRoleMatches(matchId, items) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-role-matches/${matchId}/assign`,
-    { items },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results }
+  return PortedSegmentRoleMatches.assignSegmentRoleMatches(matchId, items); // { results }
 }
 
 // ─── Role Insight: peer groups ────────────────────────────────────────────────
 
 export async function startRoleScan() {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedRoleScans.startRoleScan(); // { scanId }
 }
 
 // ─── Skeleton role generation ──────────────────────────────────────────────────
@@ -1764,97 +1600,74 @@ export async function startRoleScan() {
 // Sales" instead of "Tokyo Auto Sales" for " - ". Omit to fall back to
 // Mining Config's saved default, same as rolePrefix/roleSuffix.
 export async function startSkeletonScan({ rolePrefix, roleSuffix, useBoundary, attributeSeparator } = {}) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/skeleton-scans`,
-    { rolePrefix, roleSuffix, useBoundary, attributeSeparator },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedSkeletonScans.startSkeletonScan({ rolePrefix, roleSuffix, useBoundary, attributeSeparator }); // { scanId }
 }
 
 export async function getSkeletonScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/skeleton-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSkeletonScans.getSkeletonScan(scanId);
 }
 
 export async function cancelSkeletonScan(scanId) {
-  await axios.post(`${API_BASE}/api/insights/skeleton-scans/${scanId}/cancel`, {}, { headers: authHeaders() });
+  await PortedSkeletonScans.cancelSkeletonScan(scanId);
 }
 
 export async function listSkeletonScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/skeleton-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSkeletonScans.listSkeletonScans();
 }
 
 export async function deleteSkeletonScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/skeleton-scans/${scanId}`, { headers: authHeaders() });
+  await PortedSkeletonScans.deleteSkeletonScan(scanId);
 }
 
 // Creates one proposed role from a Skeleton Role Model draft in ISC.
 export async function createSkeletonScanRole(scanId, index) {
-  const resp = await axios.post(`${API_BASE}/api/insights/skeleton-scans/${scanId}/results/${index}/create`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedSkeletonScans.createSkeletonScanRole(scanId, index);
 }
 
 export async function listRoleScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleScans.listRoleScans();
 }
 
 export async function getRoleScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleScans.getRoleScan(scanId);
 }
 
 export async function cancelRoleScan(scanId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/${scanId}/cancel`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleScans.cancelRoleScan(scanId);
 }
 
 export async function deleteRoleScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/role-scans/${scanId}`, { headers: authHeaders() });
+  await PortedRoleScans.deleteRoleScan(scanId);
 }
 
 // ─── Attribute Sync scan ────────────────────────────────────────────────────
 
 export async function startAttributeSyncScan() {
-  const resp = await axios.post(`${API_BASE}/api/insights/attribute-sync-scans`, {}, { headers: authHeaders() });
-  return resp.data; // { scanId }
+  return PortedAttributeSyncScans.startAttributeSyncScan(); // { scanId }
 }
 
 export async function listAttributeSyncScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/attribute-sync-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAttributeSyncScans.listAttributeSyncScans();
 }
 
 export async function getAttributeSyncScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/attribute-sync-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAttributeSyncScans.getAttributeSyncScan(scanId);
 }
 
 export async function deleteAttributeSyncScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/attribute-sync-scans/${scanId}`, { headers: authHeaders() });
+  await PortedAttributeSyncScans.deleteAttributeSyncScan(scanId);
 }
 
 // The roles / access profiles / entitlements tagged with one metadata value,
 // by name: { items, total }. type: "roles" | "accessprofiles" | "entitlements".
 export async function listAccessByMetadataValue(key, value, type, { limit = 100, offset = 0 } = {}) {
-  const resp = await axios.get(
-    `${API_BASE}/api/metadata/${encodeURIComponent(key)}/values/${encodeURIComponent(value)}/access`,
-    { params: { type, limit, offset }, headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedMetadata.listAccessByMetadataValue(key, value, type, { limit, offset });
 }
 
 // Deletes values of a custom metadata attribute, one ISC call per value (ISC
 // has no batch delete): { deleted: [value], failed: [{ value, error }] }.
 export async function deleteMetadataValues(key, values) {
-  const resp = await axios.post(`${API_BASE}/api/metadata/${encodeURIComponent(key)}/values/delete`, { values }, { headers: authHeaders() });
-  return resp.data;
+  return PortedMetadata.deleteMetadataValues(key, values);
 }
 
 // ─── Access Model Metadata search ───────────────────────────────────────────
@@ -2177,12 +1990,24 @@ export async function setAccountEnabled(accountId, enabled) {
   return resp.data;
 }
 
+// ─── AI through ISC — tenant setup from the Preferences key field ──────────
+// Creates or updates the "Admin Studio AI Connection" and "Admin Studio AI
+// Key" parameters and the "Admin Studio AI Query" workflow for the given key.
+// { connection, key, workflow } each { id, action }.
+export async function provisionAiWorkflow(apiKey) {
+  return AiSetup.provisionAiWorkflow(apiKey);
+}
+export const describeAiSetup = AiSetup.describeAiSetup;
+// { connection, key, workflow } presence on this tenant; never a key value.
+export async function getAiTenantSetup() {
+  return AiSetup.getAiTenantSetup();
+}
+
 // ─── JSON editors — AI syntax repair ────────────────────────────────────────
 // { fixed, explanation } for text that doesn't parse — `fixed` is verified
 // by the server to parse. `error` is JSON.parse's own message for the text.
 export async function fixJsonWithAi(text, error) {
-  const resp = await axios.post(`${API_BASE}/api/ai/fix-json`, { text, error }, { headers: authHeaders() });
-  return resp.data;
+  return PortedJsonRepair.fixJsonWithAi(text, error);
 }
 
 // ─── Launchers (Browse > Launchers) ─────────────────────────────────────────
@@ -2211,8 +2036,7 @@ export async function getLauncher(id) {
 // { entitlement | null, matchedBy } — the entitlement ISC created for this
 // launcher on its internal IdentityNow source (see the server route).
 export async function getLauncherEntitlement(id) {
-  const resp = await axios.get(`${API_BASE}/api/launchers/${id}/entitlement`, { headers: authHeaders() });
-  return resp.data;
+  return PortedLaunchers.getLauncherEntitlement(id);
 }
 
 // An entitlement's request config: approval steps for access and
@@ -2244,8 +2068,7 @@ export async function deleteItemApprovalConfig(objectId, scope) {
 // Makes the launcher's entitlement requestable — now if ISC has created it,
 // otherwise the server waits for it in the background. { status: "done" | "pending" }
 export async function makeLauncherEntitlementRequestable(id) {
-  const resp = await axios.post(`${API_BASE}/api/launchers/${id}/entitlement/requestable`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedLaunchers.makeLauncherEntitlementRequestable(id);
 }
 
 // body: { name, description, type: "INTERACTIVE_PROCESS", disabled,
@@ -2297,36 +2120,38 @@ export async function searchFailedEvents({ days = 7, limit = 250 } = {}) {
   return searchEvents({ days, failedOnly: true, limit });
 }
 
+// Ported to lib/ported/opsSuggestions.js (the old /api/insights/ops routes):
+// the AI analysis runs through lib/aiProxy.js, so by default on the tenant's
+// "Admin Studio AI Query" workflow, and the saved suggestions live in this
+// browser's IndexedDB per tenant.
+
 // The saved suggestion for one event ({ suggestion: null } when none yet).
 export async function getEventFixSuggestion(eventId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/ops/suggest/${encodeURIComponent(eventId)}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.getEventFixSuggestion(eventId);
 }
 
 // [{ eventId, generatedAt }] — every event with a saved suggestion.
 export async function listEventFixSuggestions() {
-  const resp = await axios.get(`${API_BASE}/api/insights/ops/suggestions`, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.listEventFixSuggestions();
 }
 
-// { suggestion, cached } — the server's AI analysis of one failed event.
+// { suggestion, cached } — the AI analysis of one failed event.
 export async function suggestEventFix(event, { refresh = false } = {}) {
-  const resp = await axios.post(`${API_BASE}/api/insights/ops/suggest`, { event, refresh }, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.suggestFix("event", event, { refresh });
 }
 
 // The same analysis for the other things that can fail — kind is "event"
-// (an audit event), "accountActivity" (an account-activities document) or
-// "connectorLog" ({ id, sourceName, connector, requestID, lines }). Saved
-// suggestions are read back with getEventFixSuggestion(aiSuggestionCacheId(…)).
+// (an audit event), "accountActivity" (an account-activities document),
+// "connectorLog" ({ id, sourceName, connector, requestID, lines }) or
+// "workflowExecution". Saved suggestions are read back with
+// getEventFixSuggestion(aiSuggestionCacheId(…)).
 export async function suggestFix(kind, item, { refresh = false } = {}) {
-  const resp = await axios.post(`${API_BASE}/api/insights/ops/suggest`, { kind, item, refresh }, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.suggestFix(kind, item, { refresh });
 }
 
 // An audit event keeps its bare id, so it shares its saved suggestion with
 // Tools > Operations; the other kinds are prefixed (mirrors the server).
-export const aiSuggestionCacheId = (kind, id) => (kind === "event" ? String(id) : `${kind}:${id}`);
+export const aiSuggestionCacheId = PortedOpsSuggestions.aiSuggestionCacheId;
 
 // ─── Certification campaigns (Browse > Certifications) ──────────────────────
 // ISC's campaign objects themselves (any type, however created), via the
@@ -2387,12 +2212,7 @@ export async function runCampaignReport(id, reportType) {
 // { zip?: { name, contentBase64 }, files: [...], failures: [{ campaign, reportType, error }] }.
 // consolidate (CSV only) merges every campaign into one file per report type.
 export async function downloadCampaignReports({ campaignIds, reportTypes, format, zip = true, consolidate = false }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/campaigns/reports/download`,
-    { campaignIds, reportTypes, format, zip, consolidate },
-    { headers: authHeaders(), timeout: 0 }
-  );
-  return resp.data;
+  return PortedCampaignReports.downloadCampaignReports({ campaignIds, reportTypes, format, zip, consolidate });
 }
 
 // The individual reviewer certifications generated for one campaign.
@@ -2428,52 +2248,42 @@ export async function listCampaignReviewItems(campaignId) {
 // > User Certifications (cert* keys on studio preferences).
 
 export async function startCertificationRun() {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs`, {}, { headers: authHeaders() });
-  return resp.data; // { runId }
+  return PortedCertRuns.startCertificationRun(); // { runId }
 }
 
 export async function listCertificationRuns() {
-  const resp = await axios.get(`${API_BASE}/api/insights/certification-runs`, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.listCertificationRuns();
 }
 
 // full: true also returns every campaign's member list with each member's
 // access items (large) — needed only by the detailed printout.
 export async function getCertificationRun(runId, { full = false } = {}) {
-  const resp = await axios.get(`${API_BASE}/api/insights/certification-runs/${runId}`, {
-    params: full ? { full: 1 } : undefined,
-    headers: authHeaders(),
-  });
-  return resp.data;
+  return PortedCertRuns.getCertificationRun(runId, { full });
 }
 
 // { run, index, campaign } — one campaign with its members and their access.
 export async function getCertificationRunCampaign(runId, index) {
-  const resp = await axios.get(`${API_BASE}/api/insights/certification-runs/${runId}/campaigns/${index}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.getCertificationRunCampaign(runId, index);
 }
 
 // Creates one planned campaign from the run in ISC (as a draft). Resolves
 // with the updated result row (members stripped); rejects with ISC's error.
 export async function createCertificationCampaign(runId, index) {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs/${runId}/campaigns/${index}/create`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.createCertificationCampaign(runId, index);
 }
 
 // Re-reads every created campaign's status/alerts from ISC; returns the run
 // (members stripped). Cheap enough to poll while any campaign is PENDING.
 export async function syncCertificationRunStatus(runId) {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs/${runId}/sync-status`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.syncCertificationRunStatus(runId);
 }
 
 export async function cancelCertificationRun(runId) {
-  const resp = await axios.post(`${API_BASE}/api/insights/certification-runs/${runId}/cancel`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedCertRuns.cancelCertificationRun(runId);
 }
 
 export async function deleteCertificationRun(runId) {
-  await axios.delete(`${API_BASE}/api/insights/certification-runs/${runId}`, { headers: authHeaders() });
+  await PortedCertRuns.deleteCertificationRun(runId);
 }
 
 // ─── Segment scans (Mining > Data Segments) ─────────────────────────────────
@@ -2482,38 +2292,29 @@ export async function deleteCertificationRun(runId) {
 // selection of the suggested items) or "metadata" (suggested items are
 // tagged with the Boundary metadata attribute and the segment's Access
 // Model is a FILTER on it — see Segments by Metadata).
-// The server's own version, uncached — see server's GET /api/version.
+// The "server" is now this bundle, so its version is the client package's.
 export async function getServerVersion() {
-  const resp = await axios.get(`${API_BASE}/api/version`, { headers: authHeaders(), params: { t: Date.now() } });
-  return resp.data?.version || null;
+  return PortedTenantInfo.getVersion()?.version || null;
 }
 
 export async function startSegmentScan({ includeRoles = true, includeEntitlements = true, mode } = {}) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-scans`,
-    { includeRoles, includeEntitlements, mode },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedSegmentScans.startSegmentScan({ includeRoles, includeEntitlements, mode }); // { scanId }
 }
 
 export async function listSegmentScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.listSegmentScans();
 }
 
 export async function getSegmentScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.getSegmentScan(scanId);
 }
 
 export async function cancelSegmentScan(scanId) {
-  const resp = await axios.post(`${API_BASE}/api/insights/segment-scans/${scanId}/cancel`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.cancelSegmentScan(scanId);
 }
 
 export async function deleteSegmentScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/segment-scans/${scanId}`, { headers: authHeaders() });
+  await PortedSegmentScans.deleteSegmentScan(scanId);
 }
 
 // Live progress of a create run — { done, total }, zeroes when nothing is
@@ -2521,17 +2322,19 @@ export async function deleteSegmentScan(scanId) {
 // and ISC rate-limits that hard, so a run can take minutes; this is what the
 // drafts screen counts off against.
 export async function getSegmentCreateProgress(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/segment-scans/${scanId}/create-progress`, { headers: authHeaders() });
-  return resp.data;
+  return PortedSegmentScans.getSegmentCreateProgress(scanId);
 }
 
 // ─── Parameter Storage (Browse > Parameters) ────────────────────────────────
-// Reads/deletes use the generic proxy. Specifications, create and update go
-// through dedicated server routes: the spec has to be requested in English,
-// and private fields (passwords, client secrets, header values) are
-// encrypted server-side, end to end to SailPoint's enclave, before they're
-// sent — see server/parameterCrypto.js. Private values never come back from
-// ISC; a parameter only ever returns its public fields.
+// Reads/deletes call ISC directly. Specifications, create and update are
+// ported in lib/ported/parameters.js: the spec has to be requested in
+// English, and private fields (passwords, client secrets, header values) are
+// encrypted in the browser, end to end to SailPoint's enclave, before they're
+// sent — see lib/ported/parameterCrypto.js. Private values never come back
+// from ISC; a parameter only ever returns its public fields.
+// testParameterHttp / testParameterOAuth are NOT ported: they called
+// arbitrary hosts from the server, which the plugin's CSP forbids from the
+// browser; they still fail with 501 until a replacement exists.
 
 export async function listParameters() {
   return fetchAllPages((page) => req("GET", "/parameter-storage/parameters", { params: page }), { pageSize: 250 });
@@ -2546,13 +2349,11 @@ export async function getParameterReferences(id) {
   return fetchAllPages((page) => req("GET", `/parameter-storage/parameters/${id}/references`, { params: page }), { pageSize: 250 });
 }
 export async function getParameterSpecifications() {
-  const resp = await axios.get(`${API_BASE}/api/parameters/specifications`, { headers: authHeaders() });
-  return resp.data;
+  return PortedParameters.getParameterSpecifications();
 }
 // body: { type, name, description, ownerId, publicFields: {}, privateFields: {} }
 export async function createParameter(body) {
-  const resp = await axios.post(`${API_BASE}/api/parameters`, body, { headers: authHeaders() });
-  return resp.data;
+  return PortedParameters.createParameter(body);
 }
 // body: any of { name, description, ownerId, publicFields, privateFields } —
 // empty private values are left unchanged.
@@ -2577,8 +2378,7 @@ export async function testParameterOAuth(body) {
 }
 
 export async function updateParameter(id, body) {
-  const resp = await axios.patch(`${API_BASE}/api/parameters/${id}`, body, { headers: authHeaders() });
-  return resp.data;
+  return PortedParameters.updateParameter(id, body);
 }
 
 // ─── Identity: user levels & governance groups (Identity detail tabs) ──────
@@ -2644,30 +2444,26 @@ export async function listGovernanceGroupMembers(id) {
 
 // fields: { name, description, owner: {id,name} }
 export async function createGovernanceGroup(fields) {
-  const resp = await axios.post(`${API_BASE}/api/workgroups`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.createGovernanceGroup(fields);
 }
 
 // fields: any of { name, description, owner: {id,name} } — only what changed.
 export async function updateGovernanceGroup(id, fields) {
-  const resp = await axios.patch(`${API_BASE}/api/workgroups/${id}`, fields, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.updateGovernanceGroup(id, fields);
 }
 
 export async function deleteGovernanceGroup(id) {
-  await axios.delete(`${API_BASE}/api/workgroups/${id}`, { headers: authHeaders() });
+  await PortedWorkgroups.deleteGovernanceGroup(id);
 }
 
 // { add: [{id,name}], remove: [{id,name}] } → { added, removed, errors }
 export async function updateGovernanceGroupMembers(id, { add = [], remove = [] } = {}) {
-  const resp = await axios.post(`${API_BASE}/api/workgroups/${id}/members`, { add, remove }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.updateGovernanceGroupMembers(id, { add, remove });
 }
 
 // { usage: [{ type, id, name, how: [labels] }], errors }
 export async function getGovernanceGroupUsage(id) {
-  const resp = await axios.get(`${API_BASE}/api/workgroups/${id}/usage`, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkgroups.getGovernanceGroupUsage(id);
 }
 
 // ─── Org config (Browse > Org Info) ─────────────────────────────────────────
@@ -2768,61 +2564,43 @@ export async function listIscSegmentItems(type, segmentId) {
 }
 
 // ─── Segments mining (ISC access-request Segments, not Data Segments) ──────
-const ACCESS_SEGMENT_SCANS = "/api/insights/access-segment-scans";
-
+// Ported to ported/accessSegmentScans.js — the scan runs in the page.
 export async function startAccessSegmentScan() {
-  const resp = await axios.post(`${API_BASE}${ACCESS_SEGMENT_SCANS}`, {}, { headers: authHeaders() });
-  return resp.data; // { scanId }
+  return PortedAccessSegmentScans.startAccessSegmentScan(); // { scanId }
 }
 export async function listAccessSegmentScans() {
-  const resp = await axios.get(`${API_BASE}${ACCESS_SEGMENT_SCANS}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.listAccessSegmentScans();
 }
 export async function getAccessSegmentScan(scanId) {
-  const resp = await axios.get(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.getAccessSegmentScan(scanId);
 }
 export async function cancelAccessSegmentScan(scanId) {
-  const resp = await axios.post(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}/cancel`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.cancelAccessSegmentScan(scanId);
 }
 export async function deleteAccessSegmentScan(scanId) {
-  await axios.delete(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}`, { headers: authHeaders() });
+  await PortedAccessSegmentScans.deleteAccessSegmentScan(scanId);
 }
 export async function getAccessSegmentCreateProgress(scanId) {
-  const resp = await axios.get(`${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}/create-progress`, { headers: authHeaders() });
-  return resp.data;
+  return PortedAccessSegmentScans.getAccessSegmentCreateProgress(scanId);
 }
 // Creates each chosen Segment in ISC (or uses the existing one of the same
 // name) and assigns its roles, access profiles and entitlements.
 export async function createAccessSegmentsFromScan(scanId, suggestionIds, { activate = true } = {}) {
-  const resp = await axios.post(
-    `${API_BASE}${ACCESS_SEGMENT_SCANS}/${scanId}/create`,
-    { suggestionIds, activate },
-    { headers: authHeaders(), timeout: 0 }
-  );
-  return resp.data; // { results: [{ id, ok, merged, segmentId, segmentName, assigned, error }] }
+  // { results: [{ id, ok, merged, segmentId, segmentName, assigned, error }] }
+  return PortedAccessSegmentScans.createAccessSegmentsFromScan(scanId, suggestionIds, { activate });
 }
 
 export async function createSegmentsFromScan(scanId, suggestionIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-scans/${scanId}/create`,
-    { suggestionIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  return PortedSegmentScans.createSegmentsFromScan(scanId, suggestionIds);
 }
 
 // For a suggestion whose name already matches a real segment (nothing was
 // created for it), merges its suggested roles/entitlements into that
 // EXISTING segment's own Access Model instead.
 export async function addScanSuggestionsToExistingSegments(scanId, suggestionIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/segment-scans/${scanId}/add-to-existing`,
-    { suggestionIds },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  // { results: [{ id, ok, segmentId?, segmentName?, error? }] }
+  return PortedSegmentScans.addScanSuggestionsToExistingSegments(scanId, suggestionIds);
 }
 
 // Runs a full SP-Config export (server polls the async job to completion —
@@ -2830,12 +2608,7 @@ export async function addScanSuggestionsToExistingSegments(scanId, suggestionIds
 // JSON plus a suggested filename. Can take a while for a large tenant, hence
 // the generous timeout override on top of the shared axios instance's default.
 export async function backupSpConfig() {
-  const resp = await axios.post(
-    `${API_BASE}/api/sp-config/backup`,
-    {},
-    { headers: authHeaders(), timeout: 150000 }
-  );
-  return resp.data; // { filename, data }
+  return PortedSpConfig.backupSpConfig(); // { filename, data }
 }
 
 // Imports a selected subset of a previously exported sp-config JSON — see
@@ -2843,12 +2616,7 @@ export async function backupSpConfig() {
 // the original export (e.g. { objects: [...] }), just narrowed to whatever
 // the user selected in the Restore screen's JSON browser.
 export async function restoreSpConfig(data) {
-  const resp = await axios.post(
-    `${API_BASE}/api/sp-config/restore`,
-    { data },
-    { headers: authHeaders(), timeout: 150000 }
-  );
-  return resp.data; // { result }
+  return PortedSpConfig.restoreSpConfig(data); // { result, details }
 }
 
 // Writes the recommended mappings back to ISC — every source in the scan
@@ -2856,12 +2624,7 @@ export async function restoreSpConfig(data) {
 // source independently, same idea as the Role Scan page's per-group Create
 // Role alongside its bulk Create All Roles. See server's POST .../:id/deploy.
 export async function deployAttributeSyncScan(scanId, sourceId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/attribute-sync-scans/${scanId}/deploy`,
-    sourceId ? { sourceId } : {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedAttributeSyncScans.deployAttributeSyncScan(scanId, sourceId || undefined);
 }
 
 // items: [{ key, name, dimensional, facts: string[] }, ...]
@@ -2873,24 +2636,14 @@ export async function generateRoleScanDescriptions(items) {
 }
 
 export async function createRoleForPeerGroup(scanId, groupId, { name, description, ownerId, ownerName }) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/${scanId}/groups/${groupId}/create-role`,
-    { name, description, ownerId, ownerName },
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleScans.createRoleForPeerGroup(scanId, groupId, { name, description, ownerId, ownerName });
 }
 
 // For a peer group whose exact attribute combination already matches an
 // existing role (group.existingRole), merges the group's own proposed
 // common access into that role instead of creating a duplicate.
 export async function mergeRoleGroupIntoExisting(scanId, groupId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-scans/${scanId}/groups/${groupId}/merge-into-existing-role`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data; // { roleId, roleName, addedCount }
+  return PortedRoleScans.mergeRoleGroupIntoExisting(scanId, groupId); // { roleId, roleName, addedCount }
 }
 
 // ─── Role Evaluation scan ──────────────────────────────────────────────────────
@@ -2908,68 +2661,37 @@ export async function mergeRoleGroupIntoExisting(scanId, groupId) {
 // name-contains query alone can't reproduce). Omit to scope by `query`
 // instead (Role Evaluation's own Start button).
 export async function startRoleEvalScan(query, considerCommonAccessRoles, roleIds) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans`,
-    {
-      query,
-      ...(considerCommonAccessRoles ? { considerCommonAccessRoles } : {}),
-      ...(roleIds ? { roleIds } : {}),
-    },
-    { headers: authHeaders() }
-  );
-  return resp.data; // { scanId }
+  return PortedRoleEvalScans.startRoleEvalScan(query, considerCommonAccessRoles, roleIds); // { scanId }
 }
 
 export async function listRoleEvalScans() {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-eval-scans`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleEvalScans.listRoleEvalScans();
 }
 
 export async function getRoleEvalScan(scanId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/role-eval-scans/${scanId}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedRoleEvalScans.getRoleEvalScan(scanId);
 }
 
 export async function cancelRoleEvalScan(scanId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/cancel`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.cancelRoleEvalScan(scanId);
 }
 
 export async function deleteRoleEvalScan(scanId) {
-  await axios.delete(`${API_BASE}/api/insights/role-eval-scans/${scanId}`, { headers: authHeaders() });
+  await PortedRoleEvalScans.deleteRoleEvalScan(scanId);
 }
 
 export async function acceptRoleEvalResult(scanId, roleId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/results/${roleId}/accept`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.acceptRoleEvalResult(scanId, roleId);
 }
 
 export async function acceptAllRoleEvalResults(scanId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/accept-all`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.acceptAllRoleEvalResults(scanId);
 }
 
 // Marks a scan result accepted without re-applying it — used after the
 // per-item detail sheet already applied everything directly against ISC.
 export async function markRoleEvalResultHandled(scanId, roleId) {
-  const resp = await axios.post(
-    `${API_BASE}/api/insights/role-eval-scans/${scanId}/results/${roleId}/mark-handled`,
-    {},
-    { headers: authHeaders() }
-  );
-  return resp.data;
+  return PortedRoleEvalScans.markRoleEvalResultHandled(scanId, roleId);
 }
 
 // ─── Workflows ──────────────────────────────────────────────────────────────
@@ -2991,16 +2713,14 @@ export async function getWorkflow(id) {
 // and feedback, that outline revised. Every trigger / step id in it is a real
 // id from the tenant's workflow library. Can take a minute.
 export async function draftWorkflowOutline({ requirements, outline, feedback }) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/ai/outline`, { requirements, outline, feedback }, { headers: authHeaders() });
-  return resp.data.outline;
+  return (await PortedWorkflowAi.draftWorkflowOutline({ requirements, outline, feedback })).outline;
 }
 
 // Builds the approved outline into a full workflow and saves it DISABLED:
 // { workflow, placeholders } — placeholders are REPLACE_WITH_… values still to
 // fill in. A 422 carries { problems } when it couldn't be made valid.
 export async function createWorkflowFromOutline({ requirements, outline }) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/ai/create`, { requirements, outline }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflowAi.createWorkflowFromOutline({ requirements, outline });
 }
 
 // The app's own structural check of a workflow ({ workflow }) or an AI-create
@@ -3008,8 +2728,7 @@ export async function createWorkflowFromOutline({ requirements, outline }) {
 // touches nothing in ISC (which has no validate call: it only validates when
 // a workflow is ENABLED). { state: "OK" | "ERROR", problems: [] }.
 export async function validateWorkflowDraft(payload) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/validate`, payload, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflows.validateWorkflowDraft(payload);
 }
 
 // Proposes a modified version of a workflow from a plain-language change —
@@ -3020,21 +2739,19 @@ export async function validateWorkflowDraft(payload) {
 // `base` ({ name, description, trigger, definition }) proposes against UNSAVED
 // editor content instead of the saved workflow — the diff is then against it.
 export async function proposeWorkflowModification(id, { instructions, proposal, feedback, base }) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/${id}/ai/modify`, { instructions, proposal, feedback, base }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflowAi.proposeWorkflowModification(id, { instructions, proposal, feedback, base });
 }
 
 // Deletes a workflow. ISC won't delete an enabled one, so the server disables
 // it first (and re-enables it if the delete then fails).
 export async function deleteWorkflow(id) {
-  await axios.delete(`${API_BASE}/api/workflows/${id}`, { headers: authHeaders() });
+  await PortedWorkflows.deleteWorkflow(id);
 }
 
 // Turns a workflow on or off; resolves the updated workflow. ISC validates
 // on enable and refuses an incomplete workflow with its own message.
 export async function setWorkflowEnabled(id, enabled) {
-  const resp = await axios.put(`${API_BASE}/api/workflows/${id}/enabled`, { enabled }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflows.setWorkflowEnabled(id, enabled);
 }
 
 // A workflow's runs, newest first as ISC returns them — kept for 90 days.
@@ -3058,8 +2775,7 @@ export async function getWorkflowExecutionHistory(executionId) {
 // comes back 409 { code: "WORKFLOW_ENABLED" }. Resolves
 // { workflow, wasDisabledToSave, reenabled, reenableError? }.
 export async function updateWorkflow(id, body, { allowDisable = false } = {}) {
-  const resp = await axios.put(`${API_BASE}/api/workflows/${id}/save`, { workflow: body, allowDisable }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflows.updateWorkflow(id, body, { allowDisable });
 }
 
 // Raw-JSON tab saves — RFC 6902 ops go through a dedicated server route
@@ -3068,15 +2784,13 @@ export async function updateWorkflow(id, body, { allowDisable = false } = {}) {
 // need the revert-to-draft flow. resource ∈ roles | entitlements |
 // access-profiles | source-apps | sources | data-segments.
 export async function patchObjectJson(resource, id, ops) {
-  const resp = await axios.patch(`${API_BASE}/api/json-edit/${resource}/${id}`, { ops }, { headers: authHeaders() });
-  return resp.data;
+  return PortedJsonEdit.patchObjectJson(resource, id, ops);
 }
 
-// { svg } — Claude renders the workflow's step graph as a flowchart SVG
-// (server-side; see POST /api/workflows/:id/flowchart).
+// { svg } — the model renders the workflow's step graph as a flowchart SVG
+// (lib/ported/workflowAi.js, the old POST /api/workflows/:id/flowchart).
 export async function generateWorkflowFlowchart(id) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/${id}/flowchart`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflowAi.generateWorkflowFlowchart(id);
 }
 
 // ─── Transforms ─────────────────────────────────────────────────────────────
@@ -3093,8 +2807,7 @@ export async function listTransforms({ limit = 250, offset = 0 } = {}) {
 // events instead: { updated: { [transformId]: { at, by } }, scanned, truncated }.
 // A transform with no entry hasn't changed within ISC's audit retention.
 export async function getTransformsLastUpdated() {
-  const resp = await axios.get(`${API_BASE}/api/transforms/last-updated`, { headers: authHeaders() });
-  return resp.data;
+  return PortedTenantInfo.getTransformsLastUpdated();
 }
 
 export async function getTransform(id) {

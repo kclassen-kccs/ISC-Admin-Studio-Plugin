@@ -23,9 +23,7 @@ Browse and Mining each gain a conditional sub-link, shown only when a
 tenant has the Multi-Company/Division Boundary enabled *and* its own
 "Create Data Segments" toggle on (set in Studio Settings → Mining Config):
 **Data Segments** under Browse (inserted just above Roles) and **Segments
-by Metadata** under Mining. A small amber badge on Browse indicates pending
-approvals or tasks; the Approvals sub-link gets a green dot and the Tasks
-sub-link an amber dot when there's something waiting.
+by Metadata** under Mining.
 
 ---
 
@@ -39,10 +37,7 @@ sub-link an amber dot when there's something waiting.
   violation vs. plain update-needed vs. clean; "SOD Violation!" /
   "Mitigated SOD Present" labels; "As of" timestamp; both tiles link to
   full scan results.
-- "Quick actions": "New access request", "View my N reports" (if any
-  exist).
-- "Pending approvals" banner + list of up to 5 most recent pending
-  approvals, each clickable.
+- "Quick actions": "View my N reports" (if any exist).
 - Manual refresh icon; log-out icon; avatar → Profile.
 - A tenant that has never run Schema Analysis is redirected to Studio
   Settings → Schema Analysis once per browser session.
@@ -53,7 +48,7 @@ sub-link an amber dot when there's something waiting.
 
 Sub-links: Identities, (conditionally Data Segments), Roles, Entitlements,
 Access Profiles, Applications, Sources, Workflows, Forms, Launchers,
-Transforms, Metadata, User Certifications, Requests, Approvals, Tasks.
+Transforms, Metadata, User Certifications.
 
 Most detail screens share two things worth knowing once:
 
@@ -88,7 +83,7 @@ Most detail screens share two things worth knowing once:
   - **Client-paged** — lists that fetch everything and filter locally
     (Roles, Access Profiles, Applications, Sources, Data Segments,
     Workflows, Forms, Launchers, Transforms, Metadata attributes, User
-    Certifications, Requests, Approvals, Tasks), paged 50 at a time by the
+    Certifications), paged 50 at a time by the
     shared `usePagedList` hook. The counts above the list, "Select all",
     and every bulk/print action still cover the WHOLE filtered result, not
     just the visible page — unchanged from before paging. The pager is
@@ -1101,24 +1096,6 @@ Most detail screens share two things worth knowing once:
 - Per-segment Select all; header Assign All Matches (N, confirm); footer
   Assign Selected (N) once anything is checked.
 
-### "My requests"
-- Filter tabs: All/Pending/Completed/Denied/Cancelled.
-- New request: pick beneficiaries (defaults to self, chips), choose Access
-  profile or Role, search-and-pick, business justification, Submit.
-- Row click → read-only detail sheet.
-
-### "Approvals"
-- Filter tabs: Pending/Approved/Rejected.
-- "Review request" detail: requester, requested-for, type, ID,
-  justification, expandable SOD-violation detail (policies + conflicting
-  access), decision comment, sticky Approve/Reject.
-
-### "Tasks"
-- List of pending manual work items.
-- "Task" detail: type, state, requester, created date, ID, any needed
-  approval-item changes (application, operation, field, account, generated
-  passwords where applicable), Mark Complete.
-
 ### "User Certifications" (campaigns)
 - Every certification campaign in the tenant (any type, however created),
   grouped by ISC status in lifecycle order: Staged — ready to start,
@@ -1773,6 +1750,23 @@ Certifications, Preferences.
   PDF" and Close.
 - **Appearance** — System (default, follows the OS), Light, or Dark.
   Per-user, server-side, syncs across devices.
+- **AI Route** — ISC workflow (default) or Direct from this browser. The
+  workflow route runs the tenant's "Admin Studio AI Query" workflow, which
+  takes its URL from the "Admin Studio AI Connection" parameter and its
+  key from the "Admin Studio AI Key" parameter in ISC Parameter Storage, so
+  no key is in the browser (see isc/README.md). Per-user.
+- **Anthropic API Key** — entered masked (eye toggle to reveal while
+  typing) and never persisted by the plugin: "Save to ISC" writes it,
+  encrypted end to end, into the tenant's "Admin Studio AI Key" parameter
+  and creates the "Admin Studio AI Connection" parameter and the "Admin
+  Studio AI Query" workflow if the tenant lacks them (the workflow is left
+  disabled, as the route needs). The field then shows that the tenant
+  holds the key (never a value) with Replace, and flags anything missing.
+  Replacing the key updates the parameter and checks the other two are
+  still in place; a line under the field says what was created or
+  updated. The Direct route, which calls api.anthropic.com from the
+  browser once ISC's plugin content security policy allows it, can use a
+  key typed here only until the tab is closed or reloaded.
 - **JSON Edit Mode** — Text (default) or Tree: the view every JSON editor
   opens in (workflows, transforms, forms, launchers, metadata, source JSON,
   raw JSON panels). Per-user and synced across devices like Appearance.

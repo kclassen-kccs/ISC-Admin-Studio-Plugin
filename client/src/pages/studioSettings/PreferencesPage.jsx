@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Settings, Monitor, Sun, Moon, Wand2, Check, AlignLeft, ListTree } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
+import { Settings, Monitor, Sun, Moon, Wand2, Check, AlignLeft, ListTree, KeyRound, Eye, EyeOff, Workflow, Globe } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
-import { setUserPreferences } from "../../lib/sailpoint";
+import { getUserPreferences, setUserPreferences, provisionAiWorkflow, describeAiSetup, getAiTenantSetup } from "../../lib/sailpoint";
 import { getJsonEditMode, setJsonEditMode } from "../../lib/jsonEditMode";
 import { TopBar } from "../../components/TopBar";
 import { StudioSettingsTitleMenu } from "../../components/StudioSettingsTitleMenu";
 import { AutoConvertModal } from "../../components/AutoConvertModal";
-import { SectionLabel, OutlineButton } from "../../components/ui";
+import { SectionLabel, OutlineButton, PrimaryButton } from "../../components/ui";
 
 // App-level preferences — currently just Dark Mode (moved here from the
 // Profile screen) and Sign out. Role Statistics Refresh lives on
@@ -45,10 +45,158 @@ const JSON_MODE_OPTIONS = [
   { value: "tree", label: "Tree", hint: "Expandable fields, edited in place", Icon: ListTree },
 ];
 
+// How the AI features reach Claude. "workflow" runs the tenant's "Admin
+// Studio AI Query" workflow, which holds the key in ISC Parameter Storage and
+// makes the outbound call on the plugin's behalf; "direct" calls
+// api.anthropic.com from this browser with the key saved below, which ISC's
+// plugin policy blocks today but is kept for when it doesn't.
+const AI_ROUTE_OPTIONS = [
+  { value: "workflow", label: "ISC workflow", hint: "Runs the \"Admin Studio AI Query\" workflow on this tenant; the key stays in ISC Parameter Storage", Icon: Workflow },
+  { value: "direct", label: "Direct from this browser", hint: "Uses a key typed below, held for this tab only; ISC doesn't yet allow this call from a plugin", Icon: Globe },
+];
+
+// The Anthropic API key is never persisted by the plugin. Saving it here
+// writes it, encrypted end to end, into the tenant's "Admin Studio AI Key"
+// parameter and creates the "Admin Studio AI Connection" parameter and the
+// "Admin Studio AI Query" workflow when they are missing (lib/aiSetup.js);
+// that is what the default ISC workflow route runs on. The only other copy
+// is held in memory for this tab so the direct route can use it. The screen
+// shows whether the tenant has the parameter, never a value: ISC does not
+// hand a private value back, and the plugin keeps none.
+function AnthropicKeySection({ session }) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [show, setShow] = useState(false);
+  const [setupNote, setSetupNote] = useState(null);
+  const setup = useQuery({ queryKey: ["ai-tenant-setup"], queryFn: getAiTenantSetup, enabled: !!session, staleTime: 60_000 });
+  const stored = !!setup.data?.key?.present;
+  const missing = setup.data
+    ? [
+        !setup.data.connection.present && '"Admin Studio AI Connection" parameter',
+        !setup.data.workflow.present && '"Admin Studio AI Query" workflow',
+        setup.data.workflow.present && setup.data.workflow.enabled && "the workflow is enabled (it must stay disabled)",
+      ].filter(Boolean)
+    : [];
+
+  const save = useMutation({
+    mutationFn: (apiKey) => provisionAiWorkflow(apiKey),
+    onMutate: () => setSetupNote(null),
+    onSuccess: (result) => {
+      setDraft("");
+      setShow(false);
+      setEditing(false);
+      setSetupNote(describeAiSetup(result));
+      queryClient.invalidateQueries({ queryKey: ["ai-tenant-setup"] });
+    },
+  });
+
+  // Not a <form>: the ISC App Shell runs the plugin in a sandboxed iframe
+  // without allow-forms, so a submit button there does nothing at all. The
+  // button and the Enter key call this directly instead.
+  function submit() {
+    const key = draft.trim();
+    if (!key || save.isPending) return;
+    save.mutate(key);
+  }
+
+  const error = save.error ? save.error?.response?.data?.error || save.error.message : null;
+
+  return (
+    <>
+      <SectionLabel bold>Anthropic API Key</SectionLabel>
+      <div className="px-4">
+        <div className="border border-gray-100 rounded-xl p-4">
+          {stored && !editing ? (
+            <div className="flex items-center gap-3">
+              <KeyRound size={16} className="text-gray-400 flex-shrink-0" />
+              <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">
+                Stored in this tenant&apos;s &quot;Admin Studio AI Key&quot; parameter
+                {missing.length > 0 && <span className="text-amber-700">; missing: {missing.join(", ")}</span>}
+              </span>
+              <OutlineButton onClick={() => setEditing(true)} className="!w-auto !py-2 !px-3 text-xs">
+                Replace
+              </OutlineButton>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <input
+                  type={show ? "text" : "password"}
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      submit();
+                    }
+                  }}
+                  placeholder="sk-ant-…"
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Anthropic API key"
+                  className="w-full bg-white border border-gray-200 rounded-xl pl-3 pr-10 py-3 font-mono text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShow((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  title={show ? "Hide key" : "Show key"}
+                  aria-label={show ? "Hide key" : "Show key"}
+                >
+                  {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              <PrimaryButton type="button" onClick={submit} loading={save.isPending} disabled={!draft.trim()} className="!w-auto !py-2.5 !px-4">
+                Save to ISC
+              </PrimaryButton>
+              {stored && (
+                <OutlineButton
+                  type="button"
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft("");
+                  }}
+                  className="!w-auto !py-2.5 !px-3"
+                >
+                  Cancel
+                </OutlineButton>
+              )}
+            </div>
+          )}
+          {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
+          {setupNote && !error && <p className="text-xs text-green-700 mt-2">{setupNote}</p>}
+          {setup.error && !error && (
+            <p className="text-xs text-amber-700 mt-2">Couldn&apos;t read this tenant&apos;s AI setup: {setup.error?.response?.data?.error || setup.error.message}</p>
+          )}
+          <p className="text-xs text-gray-400 mt-3">
+            The key is stored only in this tenant&apos;s &quot;Admin Studio AI Key&quot; parameter, encrypted on the way
+            there; the plugin keeps no copy. Saving also creates the &quot;Admin Studio AI Connection&quot; parameter and
+            the &quot;Admin Studio AI Query&quot; workflow if they are missing, which is what the ISC workflow route runs
+            on, and replacing the key checks they are still in place. The &quot;Direct from this browser&quot; route can
+            use a key typed here until this tab is closed or reloaded.
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function PreferencesPage() {
   const { session } = useAuth();
   const { mode, setMode, systemDark } = useTheme();
   const [autoConvertOpen, setAutoConvertOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const prefs = useQuery({ queryKey: ["user-preferences"], queryFn: getUserPreferences, enabled: !!session, staleTime: Infinity });
+  const aiRoute = prefs.data?.aiRoute || "workflow";
+  const saveAiRoute = useMutation({
+    mutationFn: (route) => setUserPreferences({ aiRoute: route }),
+    onSuccess: (next) => queryClient.setQueryData(["user-preferences"], next),
+  });
+  function chooseAiRoute(next) {
+    queryClient.setQueryData(["user-preferences"], (cur) => ({ ...(cur || {}), aiRoute: next }));
+    saveAiRoute.mutate(next);
+  }
 
   const saveThemeMode = useMutation({
     mutationFn: (themeMode) => setUserPreferences({ themeMode }),
@@ -121,6 +269,33 @@ export default function PreferencesPage() {
             ))}
           </div>
         </div>
+
+        <SectionLabel bold>AI Route</SectionLabel>
+        <div className="px-4">
+          <div className="border border-gray-100 rounded-xl overflow-hidden">
+            {AI_ROUTE_OPTIONS.map(({ value, label, hint, Icon }, i) => (
+              <button
+                key={value}
+                onClick={() => chooseAiRoute(value)}
+                className={`w-full flex items-center gap-3 px-4 py-3.5 text-left ${i > 0 ? "border-t border-gray-100" : ""}`}
+                aria-pressed={aiRoute === value}
+              >
+                <Icon size={16} className="text-gray-400 flex-shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="text-sm text-gray-700 block">{label}</span>
+                  <span className="text-xs text-gray-400 block">{hint}</span>
+                </span>
+                {aiRoute === value && <Check size={16} className="text-blue-600 flex-shrink-0" />}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 mt-1.5">
+            The workflow reads its URL from the &quot;Admin Studio AI Connection&quot; parameter and its key from
+            &quot;Admin Studio AI Key&quot;; set the key&apos;s header value in ISC Parameter Storage.
+          </p>
+        </div>
+
+        <AnthropicKeySection session={session} />
 
         <SectionLabel bold>JSON Edit Mode</SectionLabel>
         <div className="px-4">

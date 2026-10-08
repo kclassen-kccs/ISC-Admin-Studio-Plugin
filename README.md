@@ -45,7 +45,7 @@ ISC App Shell ──postMessage──▶ Admin Studio (React, sandboxed iframe)
 | Area | State |
 |---|---|
 | Identities, roles (incl. dimensions, members, entitlements, propagation), sources (schemas, accounts, aggregation, identity profiles, apps, datasets, resources), connector customizers, Common Access flags, SOD mitigations, role evaluation | Ported to the client |
-| Remaining generic ISC pages (entitlements, access profiles, applications, workflows, forms, transforms, launchers, campaigns, approvals, tasks, etc.) | Work through `/api/isc` where they already did; routes with dedicated server logic still being ported |
+| Remaining generic ISC pages (entitlements, access profiles, applications, workflows, forms, transforms, launchers, campaigns, etc.) | Work through `/api/isc` where they already did; routes with dedicated server logic still being ported |
 | Role mining scans, skeleton scans, attribute sync, data segments, schema analysis, tenant settings, preferences, reports, backup and restore, parameters | Not yet ported. Calls return a "not yet available in the plugin" error (HTTP 501) |
 | AI-generated descriptions and workflow AI | Removed. The plugin CSP allows no outside calls |
 | LDAP lookups | Removed |
@@ -105,6 +105,16 @@ The plugin is reachable at its own URL
 (`https://<tenant>.identitynow.com/ui/plugin/<plugin-id>`) until navbar
 customization is available in ISC.
 
+### Distributable package
+
+[`dist/`](dist/) holds the deployable plugin for tenants that don't build from
+source: `admin-studio-plugin.zip` (manifest, built app, `install.sh`,
+`install.ps1` for Windows, `INSTALL.md`, `BUILD.txt`), with the install
+scripts and notes alongside.
+`npm run dist` rebuilds it (`-- --no-build` to package the current
+`client/build`); it is rebuilt with every plugin change, so `dist/` always
+matches the source. See [`dist/INSTALL.md`](dist/INSTALL.md).
+
 ## Manifest
 
 [`sp-ui-plugin.json`](sp-ui-plugin.json) is the contract with ISC. The
@@ -127,6 +137,7 @@ Validate it offline with `npm run validate`.
 | `npm start` | HTTPS dev server for use with `sail ui-plugins link` |
 | `npm run build` | Production build into `client/build` |
 | `npm run deploy` | Build, then `sail ui-plugins upload` |
+| `npm run dist` | Build, then package `dist/admin-studio-plugin.zip` with the install script |
 | `npm run validate` | Offline manifest check |
 | `npm run version:bump` | Bumps the version across package manifests |
 

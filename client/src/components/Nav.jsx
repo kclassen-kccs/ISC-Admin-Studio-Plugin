@@ -1,26 +1,13 @@
 import { useState } from "react";
-import { Home, Users, UsersRound, Send, CheckSquare, ShieldCheck, Sparkles, Settings, Users2, LayoutGrid, Layers, Database, X, ClipboardCheck, ClipboardList, ChevronDown, Shapes, Bone, RefreshCw, Archive, Download, Upload, DatabaseBackup, DatabaseZap, BarChart3, Key, Tags, GitBranch, FunctionSquare, Wrench, Binary, Percent, Mail, BadgeCheck, Activity, Rocket, Split, Building2, KeyRound } from "lucide-react";
+import { Home, Users, UsersRound, ShieldCheck, Sparkles, Settings, Users2, LayoutGrid, Layers, Database, X, ClipboardCheck, ClipboardList, ChevronDown, Shapes, Bone, RefreshCw, Archive, Download, Upload, DatabaseBackup, DatabaseZap, BarChart3, Key, Tags, GitBranch, FunctionSquare, Wrench, Binary, Percent, Mail, BadgeCheck, Activity, Rocket, Split, Building2, KeyRound } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../hooks/useAuth";
 import { useNavDrawer } from "../hooks/useNavDrawer";
-import { getPendingApprovalsCount, getPendingWorkItemsCount, getSchemaAnalysis, getTenantUiMetadata } from "../lib/sailpoint";
+import { getSchemaAnalysis } from "../lib/sailpoint";
 import pkg from "../../package.json";
-import { tenantUiHost } from "../lib/tenantHost";
 
 const APP_VERSION = pkg.version;
-
-// Black or white text on a given badge colour, by perceived brightness — the
-// badge colour is whatever the tenant configured, so neither is safe to
-// assume (ISC's own examples range from near-black navy to bright amber).
-function readableOn(hex) {
-  const h = String(hex || "").replace("#", "");
-  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
-  if (full.length !== 6) return undefined;
-  const [r, g, b] = [0, 2, 4].map((i) => parseInt(full.slice(i, i + 2), 16));
-  // Rec. 601 luma.
-  return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#111827" : "#ffffff";
-}
 
 const TABS = [
   { path: "/", label: "Home", Icon: Home },
@@ -59,14 +46,9 @@ const ROLE_MINING_ACCESS_SEGMENTS_SUBLINK = { path: "/role-mining/access-segment
 
 // Sidebar-only sub-links shown nested under the Tools tab — Event Log
 // first (reads the tenant's audit events and offers AI fix suggestions),
-// then Requests, Approvals and Tasks (moved here from Browse; they keep
-// their own top-level paths, see onTools), then Base64 and URL Encode,
-// which run entirely client-side.
+// then Base64 and URL Encode, which run entirely client-side.
 const TOOLS_SUBLINKS = [
   { path: "/tools/event-log", label: "Event Log", Icon: Activity },
-  { path: "/requests", label: "Requests", Icon: Send },
-  { path: "/approvals", label: "Approvals", Icon: CheckSquare },
-  { path: "/tasks", label: "Tasks", Icon: ClipboardList },
   { path: "/tools/base64", label: "Base64", Icon: Binary },
   { path: "/tools/url-encode", label: "URL Encode", Icon: Percent },
 ];
@@ -192,49 +174,6 @@ function NavContent({ onNavigate = () => {} }) {
   const backupRestoreExpanded = onBackupRestore || expandedTab === "backupRestore";
   const toolsExpanded = onTools || expandedTab === "tools";
 
-  // A quiet flag on the Approvals link — no need to open the tab to know
-  // there's something waiting.
-  const pendingApprovals = useQuery({
-    queryKey: ["pending-approvals-count"],
-    queryFn: getPendingApprovalsCount,
-    enabled: !!session,
-  });
-  const hasPending = typeof pendingApprovals.data === "number" && pendingApprovals.data > 0;
-
-  // ORG_ADMIN-only and experimental, so a plain user just gets { badge: null }
-  // and the box falls back to the registered site name.
-  const uiMetadata = useQuery({
-    queryKey: ["tenant-ui-metadata"],
-    queryFn: getTenantUiMetadata,
-    enabled: !!session?.tenant,
-    staleTime: 10 * 60 * 1000,
-  });
-  const badge = uiMetadata.data?.badge || null;
-
-  const pendingTasks = useQuery({
-    queryKey: ["pending-work-items-count"],
-    queryFn: getPendingWorkItemsCount,
-    enabled: !!session,
-  });
-  const hasPendingTasks = typeof pendingTasks.data === "number" && pendingTasks.data > 0;
-
-  // ISC only honours admin authorities on a strongly authenticated token, so
-  // this is the difference between the app working and 403ing everywhere.
-  // Green = strong auth, red = not (and admin calls will be refused).
-  const strongAuth = session?.strongAuth;
-  // Amber sits between the two: the session isn't strongly authenticated, but
-  // calls still work because they run on the tenant's service credential —
-  // with its permissions, not yours. Worth showing distinctly from green.
-  const elevated = session?.elevated;
-  const authStyle =
-    strongAuth === true
-      ? { box: "bg-green-100 border-green-200", icon: "text-green-700", text: "text-green-800" }
-      : elevated
-      ? { box: "bg-amber-100 border-amber-200", icon: "text-amber-600", text: "text-amber-900" }
-      : strongAuth === false
-      ? { box: "bg-red-100 border-red-200", icon: "text-red-700", text: "text-red-800" }
-      : { box: "border-transparent", icon: "text-blue-600", text: "text-gray-900" };
-
   function go(path) {
     navigate(path);
     onNavigate();
@@ -242,57 +181,6 @@ function NavContent({ onNavigate = () => {} }) {
 
   return (
     <div className="flex flex-col h-full">
-      <button
-        type="button"
-        onClick={() => {
-          // The tenant's ISC console lives at the same host as the API minus
-          // the "api" subdomain segment — e.g. tenant.api.identitynow-demo.com
-          // becomes tenant.identitynow-demo.com.
-          if (session?.tenant) {
-            window.open(`https://${tenantUiHost(session.tenant)}`, "_blank", "noopener,noreferrer");
-          }
-        }}
-        disabled={!session?.tenant}
-        className={`flex items-center gap-2 px-3 py-2 mb-8 rounded-xl border text-left disabled:cursor-default ${authStyle.box}`}
-        title={
-          session?.tenant
-            ? `Open ${session.tenant} in SailPoint ISC` +
-              (strongAuth === true
-                ? " — strong authentication active, running with your own permissions"
-                : elevated
-                ? " — not strongly authenticated; API calls run on this tenant's service credential, not your own permissions"
-                : strongAuth === false
-                ? " — not strongly authenticated; SailPoint will refuse admin API calls (403)"
-                : "")
-            : undefined
-        }
-      >
-        <ShieldCheck size={22} className={authStyle.icon} />
-        <span className="flex flex-col min-w-0">
-          <span className={`font-semibold leading-tight ${authStyle.text}`}>Admin Studio</span>
-          {/* The tenant's own instance badge (Sandbox / Production / ...) when
-              it has one and it's set visible, in the colour ISC was given;
-              otherwise the name this tenant was registered under, falling
-              back to the tenant host if it was registered without one. */}
-          {badge ? (
-            <span
-              className="text-xs leading-tight truncate font-medium px-1.5 py-0.5 rounded mt-0.5 self-start max-w-full"
-              style={badge.color
-                ? { backgroundColor: badge.color, color: readableOn(badge.color) }
-                : undefined}
-              title={`Instance badge — ${badge.name}`}
-            >
-              {badge.name}
-            </span>
-          ) : (
-            (session?.siteName || session?.tenant) && (
-              <span className={`text-xs leading-tight truncate opacity-70 ${authStyle.text}`}>
-                {session.siteName || session.tenant}
-              </span>
-            )
-          )}
-        </span>
-      </button>
       <nav className="flex-1 flex flex-col gap-1">
         {TABS.map(({ path, label, Icon }) => {
           // Browse's sub-links live under different path prefixes than its
@@ -332,12 +220,6 @@ function NavContent({ onNavigate = () => {} }) {
               >
                 <Icon size={20} strokeWidth={active ? 2.5 : 1.8} />
                 <span className="flex-1 text-left">{label}</span>
-                {isToolsTab && (hasPending || hasPendingTasks) && (
-                  <span
-                    className="w-2 h-2 rounded-full bg-amber-500 flex-shrink-0"
-                    title="Pending approvals or tasks"
-                  />
-                )}
                 {hasSubmenu && (
                   <ChevronDown
                     size={14}
@@ -390,18 +272,6 @@ function NavContent({ onNavigate = () => {} }) {
                       >
                         <SubIcon size={14} strokeWidth={1.8} />
                         <span className="flex-1">{subLabel}</span>
-                        {subPath === "/approvals" && hasPending && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"
-                            title={`${pendingApprovals.data} pending approval${pendingApprovals.data === 1 ? "" : "s"}`}
-                          />
-                        )}
-                        {subPath === "/tasks" && hasPendingTasks && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"
-                            title={`${pendingTasks.data} pending task${pendingTasks.data === 1 ? "" : "s"}`}
-                          />
-                        )}
                       </button>
                     );
                   })}
@@ -459,18 +329,6 @@ function NavContent({ onNavigate = () => {} }) {
                       >
                         <SubIcon size={14} strokeWidth={1.8} />
                         <span className="flex-1">{subLabel}</span>
-                        {subPath === "/approvals" && hasPending && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0"
-                            title={`${pendingApprovals.data} pending approval${pendingApprovals.data === 1 ? "" : "s"}`}
-                          />
-                        )}
-                        {subPath === "/tasks" && hasPendingTasks && (
-                          <span
-                            className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0"
-                            title={`${pendingTasks.data} pending task${pendingTasks.data === 1 ? "" : "s"}`}
-                          />
-                        )}
                       </button>
                     );
                   })}

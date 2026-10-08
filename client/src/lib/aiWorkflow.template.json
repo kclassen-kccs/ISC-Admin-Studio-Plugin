@@ -1,0 +1,47 @@
+{
+  "name": "Admin Studio AI Query",
+  "description": "Called by the Admin Studio plugin. Sends a Claude Messages API request to the URL held in the \"Admin Studio AI Connection\" parameter, authenticated with the \"Admin Studio AI Key\" parameter (x-api-key), and returns the JSON reply.\n\nTrigger input: { \"url\": \"<from Admin Studio AI Connection>\", \"request\": { \"model\": \"...\", \"max_tokens\": 300, \"messages\": [ { \"role\": \"user\", \"content\": \"...\" } ] } }\nOutput: the HTTP step's statusCode and body (the Claude message JSON) in the execution history.",
+  "enabled": false,
+  "trigger": {
+    "type": "EXTERNAL",
+    "attributes": {
+      "id": "idn:external-http",
+      "integrationId": null
+    }
+  },
+  "definition": {
+    "start": "Query Claude",
+    "steps": {
+      "End Step - Success": {
+        "actionId": "sp:operator-success",
+        "displayName": "",
+        "type": "success"
+      },
+      "Query Claude": {
+        "actionId": "sp:http",
+        "attributes": {
+          "jsonRequestBody.$": "$.trigger.request",
+          "method": "post",
+          "param_authenticationRef": "header",
+          "param_header": {
+            "mapping": {
+              "auth_header_name": "headerName",
+              "auth_header_value": "headerValue"
+            },
+            "paramType": "1.3",
+            "paramID": "<id of the Admin Studio AI Key parameter>"
+          },
+          "requestContentType": "json",
+          "requestHeaders": {
+            "anthropic-version": "2023-06-01"
+          },
+          "url": "{{$.trigger.url}}"
+        },
+        "displayName": "Query Claude",
+        "nextStep": "End Step - Success",
+        "type": "action",
+        "versionNumber": 3
+      }
+    }
+  }
+}

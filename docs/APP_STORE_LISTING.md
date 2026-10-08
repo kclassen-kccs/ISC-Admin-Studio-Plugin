@@ -53,11 +53,10 @@ SailPoint compatibility is stated in the description instead.)*
  glance. Schedule recurring evaluations and open the app to fresh results.
 
  A FULL ISC BROWSER
- Identities, roles, access profiles, applications, sources, entitlements,
- requests, approvals, and tasks — searchable, filterable, and actionable.
- Enable or disable identities in bulk, approve pending requests, submit
- access requests, edit role membership criteria, and drill from any
- identity down to the individual entitlement.
+ Identities, roles, access profiles, applications, sources, and
+ entitlements — searchable, filterable, and actionable. Enable or disable
+ identities in bulk, grant or revoke access, edit role membership criteria,
+ and drill from any identity down to the individual entitlement.
 
  BACKUP & RESTORE
  Export role definitions and offline-source account data as portable
