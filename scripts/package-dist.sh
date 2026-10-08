@@ -6,9 +6,9 @@
 #
 # Produces dist/admin-studio-plugin.zip, whose top folder admin-studio-plugin/
 # holds sp-ui-plugin.json (the manifest), client/build/ (the built app),
-# install.sh and INSTALL.md, and dist/BUILD.txt saying what was packaged.
-# dist/install.sh and dist/INSTALL.md are the maintained originals; the zip
-# carries copies. Nothing here reads or writes credentials or API keys.
+# install.sh, install.ps1 and INSTALL.md, and dist/BUILD.txt saying what was
+# packaged. dist/install.sh, dist/install.ps1 and dist/INSTALL.md are the
+# maintained originals; the zip carries copies. Nothing here reads or writes credentials or API keys.
 # Run it before every push that changes the plugin, so dist/ stays current.
 set -euo pipefail
 
@@ -30,9 +30,9 @@ trap 'rm -rf "$STAGE"' EXIT
 mkdir -p "$STAGE/$NAME/client"
 cp sp-ui-plugin.json "$STAGE/$NAME/"
 cp -R client/build "$STAGE/$NAME/client/build"
-cp dist/install.sh dist/INSTALL.md "$STAGE/$NAME/"
+cp dist/install.sh dist/install.ps1 dist/INSTALL.md "$STAGE/$NAME/"
 chmod +x "$STAGE/$NAME/install.sh"
-printf 'Admin Studio ISC UI plugin %s\nPackaged %s from commit %s (the commit before the one that carries this file)\nContents: sp-ui-plugin.json, client/build/, install.sh, INSTALL.md\nNo source, credentials or API keys are included.\n' \
+printf 'Admin Studio ISC UI plugin %s\nPackaged %s from commit %s (the commit before the one that carries this file)\nContents: sp-ui-plugin.json, client/build/, install.sh, install.ps1, INSTALL.md\nNo source, credentials or API keys are included.\n' \
   "$VERSION" "$DATE" "$COMMIT" > "$STAGE/$NAME/BUILD.txt"
 
 rm -f dist/*.zip

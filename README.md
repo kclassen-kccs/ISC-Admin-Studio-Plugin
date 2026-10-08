@@ -109,7 +109,8 @@ customization is available in ISC.
 
 [`dist/`](dist/) holds the deployable plugin for tenants that don't build from
 source: `admin-studio-plugin.zip` (manifest, built app, `install.sh`,
-`INSTALL.md`, `BUILD.txt`), with the install script and notes alongside.
+`install.ps1` for Windows, `INSTALL.md`, `BUILD.txt`), with the install
+scripts and notes alongside.
 `npm run dist` rebuilds it (`-- --no-build` to package the current
 `client/build`); it is rebuilt with every plugin change, so `dist/` always
 matches the source. See [`dist/INSTALL.md`](dist/INSTALL.md).
