@@ -1756,18 +1756,17 @@ Certifications, Preferences.
   key from the "Admin Studio AI Key" parameter in ISC Parameter Storage, so
   no key is in the browser (see isc/README.md). Per-user.
 - **Anthropic API Key** — entered masked (eye toggle to reveal while
-  typing); once saved it shows only as prefix + last four with Change /
-  Remove, and can't be read back. Saving it sets the tenant up for the
-  workflow route: the key is written, encrypted end to end, into the
-  "Admin Studio AI Key" parameter, and the "Admin Studio AI Connection"
-  parameter and the "Admin Studio AI Query" workflow are created if the
-  tenant lacks them (the workflow is left disabled, as the route needs).
-  Saving a new key updates the parameter and checks the other two are
+  typing) and never persisted by the plugin: "Save to ISC" writes it,
+  encrypted end to end, into the tenant's "Admin Studio AI Key" parameter
+  and creates the "Admin Studio AI Connection" parameter and the "Admin
+  Studio AI Query" workflow if the tenant lacks them (the workflow is left
+  disabled, as the route needs). The field then shows that the tenant
+  holds the key (never a value) with Replace, and flags anything missing.
+  Replacing the key updates the parameter and checks the other two are
   still in place; a line under the field says what was created or
-  updated. A copy stays in this browser's preferences (never in the
-  bundle) for the Direct route, which calls api.anthropic.com from the
-  browser once ISC's plugin content security policy allows it. Remove
-  clears only the browser copy.
+  updated. The Direct route, which calls api.anthropic.com from the
+  browser once ISC's plugin content security policy allows it, can use a
+  key typed here only until the tab is closed or reloaded.
 - **JSON Edit Mode** — Text (default) or Tree: the view every JSON editor
   opens in (workflows, transforms, forms, launchers, metadata, source JSON,
   raw JSON panels). Per-user and synced across devices like Appearance.

@@ -330,7 +330,9 @@ const THEME_MODES = new Set(["system", "light", "dark"]);
 // Which view JSON editors open in; Text always works, Tree needs parseable JSON.
 const JSON_EDIT_MODES = new Set(["text", "tree"]);
 // How AI calls leave the plugin: through the tenant's "Admin Studio AI
-// Query" workflow (default) or straight from this browser with the saved key.
+// Query" workflow (default) or straight from this browser with a key held
+// in memory for the open tab (lib/aiProxy.js). The key itself is never a
+// stored preference: it lives in ISC Parameter Storage only.
 const AI_ROUTES = new Set(["workflow", "direct"]);
 const DEFAULT_USER_PREFERENCES = { themeMode: "system", jsonEditMode: "text", aiRoute: "workflow" };
 
@@ -344,26 +346,8 @@ function normalizeUserPreferences(stored) {
   if (!JSON_EDIT_MODES.has(prefs.jsonEditMode)) prefs.jsonEditMode = "text";
   if (!AI_ROUTES.has(prefs.aiRoute)) prefs.aiRoute = "workflow";
   prefs.darkMode = prefs.themeMode === "dark"; // kept so an older client reads something sensible
-  if (typeof prefs.anthropicApiKey !== "string" || !prefs.anthropicApiKey) delete prefs.anthropicApiKey;
+  delete prefs.anthropicApiKey; // an earlier build stored the key here; it is never kept now
   return prefs;
-}
-
-// The Anthropic key is the one preference that is a secret. It stays in this
-// browser's IndexedDB (never in the bundle, never sent to ISC or the AI proxy)
-// and leaves the page only as the x-api-key header of a direct call to
-// api.anthropic.com (see lib/aiProxy.js). Readers of the preferences get a
-// masked hint, not the key; only the AI client reads the key itself.
-function maskApiKey(key) {
-  const k = String(key || "");
-  if (!k) return null;
-  const prefix = k.startsWith("sk-ant-") ? "sk-ant-" : "";
-  return `${prefix}••••••••${k.slice(-4)}`;
-}
-
-/** What the preferences screen and other callers see instead of the key. */
-function withoutSecrets(prefs) {
-  const { anthropicApiKey, ...rest } = prefs;
-  return { ...rest, hasAnthropicApiKey: !!anthropicApiKey, anthropicApiKeyHint: maskApiKey(anthropicApiKey) };
 }
 
 const userPreferencesStore = () => recordStore("user-preferences");
@@ -378,11 +362,19 @@ async function userKey() {
 
 async function readUserPreferences() {
   const forTenant = (await userPreferencesStore().get(tenantKey())) || {};
-  return normalizeUserPreferences(forTenant[await userKey()]);
+  const user = await userKey();
+  const stored = forTenant[user];
+  // An earlier build kept the Anthropic key in this record. Scrub it the
+  // first time it is read: the key belongs in ISC Parameter Storage only.
+  if (stored && Object.prototype.hasOwnProperty.call(stored, "anthropicApiKey")) {
+    forTenant[user] = normalizeUserPreferences(stored);
+    await userPreferencesStore().put(tenantKey(), forTenant);
+  }
+  return normalizeUserPreferences(stored);
 }
 
 export async function getUserPreferences() {
-  return withoutSecrets(await readUserPreferences());
+  return readUserPreferences();
 }
 
 /** "workflow" or "direct"; "workflow" when there is no session yet. */
@@ -394,31 +386,18 @@ export async function getAiRoute() {
   }
 }
 
-/** The stored Anthropic API key, or null. For the AI client only; never log it. */
-export async function getAnthropicApiKey() {
-  try {
-    return (await readUserPreferences()).anthropicApiKey || null;
-  } catch {
-    return null; // no session yet → no key
-  }
-}
-
 /**
  * PUT /api/preferences — only ever writes the signed-in user's own entry.
- * `anthropicApiKey`: a string stores it, "" or null removes it.
+ * The Anthropic key is not a preference: it goes to ISC Parameter Storage
+ * (lib/aiSetup.js) and is refused here.
  */
 export async function setUserPreferences(body = {}) {
   const { themeMode, darkMode, jsonEditMode, anthropicApiKey, aiRoute } = body;
   const patch = {};
+  if (anthropicApiKey !== undefined) throw badRequest("The Anthropic API key is kept in ISC Parameter Storage, not in preferences.");
   if (aiRoute !== undefined) {
     if (!AI_ROUTES.has(aiRoute)) throw badRequest('aiRoute must be "workflow" or "direct".');
     patch.aiRoute = aiRoute;
-  }
-  if (anthropicApiKey !== undefined) {
-    if (anthropicApiKey !== null && typeof anthropicApiKey !== "string") throw badRequest("anthropicApiKey must be a string.");
-    const key = (anthropicApiKey || "").trim();
-    if (key && !/^[\x21-\x7e]{20,}$/.test(key)) throw badRequest("That doesn't look like an Anthropic API key.");
-    patch.anthropicApiKey = key || null;
   }
   if (jsonEditMode !== undefined) {
     if (!JSON_EDIT_MODES.has(jsonEditMode)) throw badRequest('jsonEditMode must be "text" or "tree".');
@@ -438,5 +417,5 @@ export async function setUserPreferences(body = {}) {
   const forTenant = (await userPreferencesStore().get(tenantKey())) || {};
   forTenant[user] = normalizeUserPreferences({ ...(forTenant[user] || {}), ...patch });
   await userPreferencesStore().put(tenantKey(), forTenant);
-  return withoutSecrets(forTenant[user]);
+  return forTenant[user];
 }

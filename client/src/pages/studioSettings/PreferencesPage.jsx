@@ -3,7 +3,7 @@ import { Settings, Monitor, Sun, Moon, Wand2, Check, AlignLeft, ListTree, KeyRou
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../hooks/useAuth";
 import { useTheme } from "../../hooks/useTheme";
-import { getUserPreferences, setUserPreferences, provisionAiWorkflow, describeAiSetup } from "../../lib/sailpoint";
+import { getUserPreferences, setUserPreferences, provisionAiWorkflow, describeAiSetup, getAiTenantSetup } from "../../lib/sailpoint";
 import { getJsonEditMode, setJsonEditMode } from "../../lib/jsonEditMode";
 import { TopBar } from "../../components/TopBar";
 import { StudioSettingsTitleMenu } from "../../components/StudioSettingsTitleMenu";
@@ -52,55 +52,42 @@ const JSON_MODE_OPTIONS = [
 // plugin policy blocks today but is kept for when it doesn't.
 const AI_ROUTE_OPTIONS = [
   { value: "workflow", label: "ISC workflow", hint: "Runs the \"Admin Studio AI Query\" workflow on this tenant; the key stays in ISC Parameter Storage", Icon: Workflow },
-  { value: "direct", label: "Direct from this browser", hint: "Uses the Anthropic API key saved below; ISC doesn't yet allow this call from a plugin", Icon: Globe },
+  { value: "direct", label: "Direct from this browser", hint: "Uses a key typed below, held for this tab only; ISC doesn't yet allow this call from a plugin", Icon: Globe },
 ];
 
-// The Anthropic API key powers the AI features (descriptions, role evaluation
-// review, workflow drafting) by calling api.anthropic.com straight from the
-// browser. Saving a key does two things: it is kept in this browser's
-// IndexedDB with the other preferences (for the direct route, never in the
-// bundle) and it is written, encrypted end to end, into the tenant's
-// "Admin Studio AI Key" parameter, with the "Admin Studio AI Connection"
-// parameter and the "Admin Studio AI Query" workflow created alongside it
-// when they are missing (lib/aiSetup.js). That is what the default ISC
-// workflow route runs on. Once saved the key is shown masked (prefix + last
-// four) and can only be replaced or removed, not read back.
-function AnthropicKeySection({ prefs, onSaved }) {
+// The Anthropic API key is never persisted by the plugin. Saving it here
+// writes it, encrypted end to end, into the tenant's "Admin Studio AI Key"
+// parameter and creates the "Admin Studio AI Connection" parameter and the
+// "Admin Studio AI Query" workflow when they are missing (lib/aiSetup.js);
+// that is what the default ISC workflow route runs on. The only other copy
+// is held in memory for this tab so the direct route can use it. The screen
+// shows whether the tenant has the parameter, never a value: ISC does not
+// hand a private value back, and the plugin keeps none.
+function AnthropicKeySection({ session }) {
+  const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const [show, setShow] = useState(false);
-  const hasKey = !!prefs?.hasAnthropicApiKey;
-
   const [setupNote, setSetupNote] = useState(null);
+  const setup = useQuery({ queryKey: ["ai-tenant-setup"], queryFn: getAiTenantSetup, enabled: !!session, staleTime: 60_000 });
+  const stored = !!setup.data?.key?.present;
+  const missing = setup.data
+    ? [
+        !setup.data.connection.present && '"Admin Studio AI Connection" parameter',
+        !setup.data.workflow.present && '"Admin Studio AI Query" workflow',
+        setup.data.workflow.present && setup.data.workflow.enabled && "the workflow is enabled (it must stay disabled)",
+      ].filter(Boolean)
+    : [];
 
-  // Store the key here, then set the tenant up with it. If ISC refuses the
-  // setup the key is still saved locally and the error says what failed.
   const save = useMutation({
-    mutationFn: async (anthropicApiKey) => {
-      const next = await setUserPreferences({ anthropicApiKey });
-      if (!anthropicApiKey) return { next, setup: null };
-      try {
-        return { next, setup: await provisionAiWorkflow(anthropicApiKey) };
-      } catch (err) {
-        err.preferences = next;
-        throw err;
-      }
-    },
+    mutationFn: (apiKey) => provisionAiWorkflow(apiKey),
     onMutate: () => setSetupNote(null),
-    onSuccess: ({ next, setup }) => {
+    onSuccess: (result) => {
       setDraft("");
       setShow(false);
       setEditing(false);
-      setSetupNote(setup ? describeAiSetup(setup) : null);
-      onSaved(next);
-    },
-    onError: (err) => {
-      if (err?.preferences) {
-        setDraft("");
-        setShow(false);
-        setEditing(false);
-        onSaved(err.preferences);
-      }
+      setSetupNote(describeAiSetup(result));
+      queryClient.invalidateQueries({ queryKey: ["ai-tenant-setup"] });
     },
   });
 
@@ -111,26 +98,22 @@ function AnthropicKeySection({ prefs, onSaved }) {
     save.mutate(key);
   }
 
-  const error = save.error
-    ? `${save.error?.preferences ? "Key saved in this browser, but the tenant setup failed: " : ""}${save.error?.response?.data?.error || save.error.message}`
-    : null;
+  const error = save.error ? save.error?.response?.data?.error || save.error.message : null;
 
   return (
     <>
       <SectionLabel bold>Anthropic API Key</SectionLabel>
       <div className="px-4">
         <div className="border border-gray-100 rounded-xl p-4">
-          {hasKey && !editing ? (
+          {stored && !editing ? (
             <div className="flex items-center gap-3">
               <KeyRound size={16} className="text-gray-400 flex-shrink-0" />
-              <span className="flex-1 min-w-0 font-mono text-sm text-gray-700 truncate" title="Saved key (masked)">
-                {prefs.anthropicApiKeyHint}
+              <span className="flex-1 min-w-0 text-sm text-gray-700 truncate">
+                Stored in this tenant&apos;s &quot;Admin Studio AI Key&quot; parameter
+                {missing.length > 0 && <span className="text-amber-700">; missing: {missing.join(", ")}</span>}
               </span>
               <OutlineButton onClick={() => setEditing(true)} className="!w-auto !py-2 !px-3 text-xs">
-                Change
-              </OutlineButton>
-              <OutlineButton onClick={() => save.mutate("")} loading={save.isPending} className="!w-auto !py-2 !px-3 text-xs">
-                Remove
+                Replace
               </OutlineButton>
             </div>
           ) : (
@@ -157,9 +140,9 @@ function AnthropicKeySection({ prefs, onSaved }) {
                 </button>
               </div>
               <PrimaryButton type="submit" loading={save.isPending} disabled={!draft.trim()} className="!w-auto !py-2.5 !px-4">
-                Save
+                Save to ISC
               </PrimaryButton>
-              {hasKey && (
+              {stored && (
                 <OutlineButton
                   type="button"
                   onClick={() => {
@@ -175,12 +158,15 @@ function AnthropicKeySection({ prefs, onSaved }) {
           )}
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
           {setupNote && !error && <p className="text-xs text-green-700 mt-2">{setupNote}</p>}
+          {setup.error && !error && (
+            <p className="text-xs text-amber-700 mt-2">Couldn&apos;t read this tenant&apos;s AI setup: {setup.error?.response?.data?.error || setup.error.message}</p>
+          )}
           <p className="text-xs text-gray-400 mt-3">
-            Saving a key stores it encrypted in this tenant&apos;s &quot;Admin Studio AI Key&quot; parameter and creates
-            the &quot;Admin Studio AI Connection&quot; parameter and the &quot;Admin Studio AI Query&quot; workflow if
-            they are missing, which is what the ISC workflow route runs on. Updating the key replaces the parameter
-            value and checks the rest is still in place. A copy stays in this browser for the &quot;Direct from this
-            browser&quot; route. Remove only clears this browser; the tenant keeps its parameter.
+            The key is stored only in this tenant&apos;s &quot;Admin Studio AI Key&quot; parameter, encrypted on the way
+            there; the plugin keeps no copy. Saving also creates the &quot;Admin Studio AI Connection&quot; parameter and
+            the &quot;Admin Studio AI Query&quot; workflow if they are missing, which is what the ISC workflow route runs
+            on, and replacing the key checks they are still in place. The &quot;Direct from this browser&quot; route can
+            use a key typed here until this tab is closed or reloaded.
           </p>
         </div>
       </div>
@@ -301,7 +287,7 @@ export default function PreferencesPage() {
           </p>
         </div>
 
-        <AnthropicKeySection prefs={prefs.data} onSaved={(next) => queryClient.setQueryData(["user-preferences"], next)} />
+        <AnthropicKeySection session={session} />
 
         <SectionLabel bold>JSON Edit Mode</SectionLabel>
         <div className="px-4">

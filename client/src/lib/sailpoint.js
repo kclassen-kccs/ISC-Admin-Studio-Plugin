@@ -1998,6 +1998,10 @@ export async function provisionAiWorkflow(apiKey) {
   return AiSetup.provisionAiWorkflow(apiKey);
 }
 export const describeAiSetup = AiSetup.describeAiSetup;
+// { connection, key, workflow } presence on this tenant; never a key value.
+export async function getAiTenantSetup() {
+  return AiSetup.getAiTenantSetup();
+}
 
 // ─── JSON editors — AI syntax repair ────────────────────────────────────────
 // { fixed, explanation } for text that doesn't parse — `fixed` is verified

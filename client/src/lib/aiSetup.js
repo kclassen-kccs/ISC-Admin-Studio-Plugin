@@ -17,12 +17,17 @@
  * Safe to run again: a key update finds everything in place, replaces the
  * secret and checks the rest. scripts/setup-ai-workflow.mjs does the same
  * from a terminal with an API client, without the key.
+ *
+ * The key is persisted nowhere in the plugin: it goes from the field to the
+ * tenant's parameter, and is otherwise only held in memory for the open tab
+ * so the "Direct from this browser" route can use it (aiProxy.js).
  */
 
 import { iscGet, iscPost, iscPut, badRequest, routeError } from "./isc";
 import { createParameter, updateParameter } from "./ported/parameters";
 import { getCredentials } from "./sailpoint";
 import { AI_WORKFLOW_NAME, AI_CONNECTION_PARAMETER, AI_KEY_PARAMETER, resetAiWorkflowCache } from "./aiWorkflow";
+import { setTabAnthropicApiKey } from "./aiProxy";
 import template from "./aiWorkflow.template.json";
 
 export const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
@@ -124,9 +129,33 @@ export async function provisionAiWorkflow(apiKey) {
     const keyParameter = await ensureKey(byName(parameters, AI_KEY_PARAMETER), key);
     const workflow = await ensureWorkflow(byName(workflows, AI_WORKFLOW_NAME), keyParameter.id);
     resetAiWorkflowCache();
+    setTabAnthropicApiKey(key);
     return { connection, key: keyParameter, workflow };
   } catch (err) {
     resetAiWorkflowCache();
+    throw routeError(err);
+  }
+}
+
+/**
+ * What the tenant has, for the Preferences screen: { connection, key, workflow }
+ * with each { present, id } and workflow.enabled. Never returns a key value.
+ */
+export async function getAiTenantSetup() {
+  try {
+    const [parameters, workflows] = await Promise.all([
+      iscGet("/v2026/parameter-storage/parameters", { limit: 250 }),
+      iscGet("/v2026/workflows", { limit: 250 }),
+    ]);
+    const connection = byName(parameters, AI_CONNECTION_PARAMETER);
+    const keyParameter = byName(parameters, AI_KEY_PARAMETER);
+    const workflow = byName(workflows, AI_WORKFLOW_NAME);
+    return {
+      connection: { present: !!String(connection?.publicFields?.url || "").trim(), id: connection?.id || null },
+      key: { present: !!keyParameter, id: keyParameter?.id || null },
+      workflow: { present: !!workflow, id: workflow?.id || null, enabled: !!workflow?.enabled },
+    };
+  } catch (err) {
     throw routeError(err);
   }
 }

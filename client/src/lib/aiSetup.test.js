@@ -8,6 +8,7 @@ jest.mock("./isc", () => {
 });
 jest.mock("./ported/parameters", () => ({ createParameter: jest.fn(), updateParameter: jest.fn() }));
 jest.mock("./sailpoint", () => ({ getCredentials: () => ({ identityId: "me" }) }));
+jest.mock("./aiProxy", () => ({ setTabAnthropicApiKey: jest.fn() }));
 
 const KEY = "sk-ant-test-0123456789abcdef";
 

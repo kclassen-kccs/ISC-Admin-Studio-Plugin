@@ -7,10 +7,12 @@
  *     tenant and makes the call with the key held in ISC Parameter Storage
  *     (see ./aiWorkflow.js). Nothing leaves the browser but an ISC API call.
  *  direct: a call to api.anthropic.com with the Anthropic API key the user
- *     saved on Preferences. The key lives in this browser's IndexedDB only
- *     and goes out as the x-api-key header of that one request. Kept for
- *     when ISC lets plugins reach out; today its CSP blocks the call.
- *  proxy (fallback of "direct" when no key is saved): the Admin Studio AI
+ *     typed on Preferences in this tab. The key is held in memory for the
+ *     open tab only (never in IndexedDB, localStorage or the bundle; the
+ *     stored copy lives in ISC Parameter Storage) and goes out as the
+ *     x-api-key header of that one request. Kept for when ISC lets plugins
+ *     reach out; today its CSP blocks the call.
+ *  proxy (fallback of "direct" when no key is held): the Admin Studio AI
  *     proxy (see /ai-proxy) at the build-time REACT_APP_AI_PROXY_URL, which
  *     authenticates the caller by their ISC access token.
  *
@@ -21,7 +23,7 @@
 import axios from "axios";
 import { getApiConfig } from "./pluginSdk";
 import { routeError, badRequest } from "./isc";
-import { getAnthropicApiKey, getAiRoute } from "./ported/settings";
+import { getAiRoute } from "./ported/settings";
 import { runAiWorkflow, aiWorkflowAvailable } from "./aiWorkflow";
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -31,6 +33,20 @@ const ANTHROPIC_VERSION = "2023-06-01";
 const MODEL = "claude-haiku-4-5-20251001";
 const STRONG_MODEL = "claude-opus-5-5";
 const TIMEOUT_MS = 190_000;
+
+// The direct route's key, for this tab only. Set when the user saves a key
+// on Preferences (which stores it in ISC); gone with the tab.
+let tabApiKey = null;
+
+/** Holds the key in memory for the direct route; "" or null forgets it. */
+export function setTabAnthropicApiKey(key) {
+  tabApiKey = String(key || "").trim() || null;
+}
+
+/** True while this tab holds a key for the direct route. */
+export function hasTabAnthropicApiKey() {
+  return !!tabApiKey;
+}
 
 function proxyUrl() {
   return String(process.env.REACT_APP_AI_PROXY_URL || "").replace(/\/+$/, "");
@@ -44,7 +60,7 @@ export function aiProxyConfigured() {
 /** True when the selected route can reach a model. */
 export async function aiConfigured() {
   if ((await getAiRoute()) === "workflow") return aiWorkflowAvailable();
-  return aiProxyConfigured() || !!(await getAnthropicApiKey());
+  return aiProxyConfigured() || hasTabAnthropicApiKey();
 }
 
 const CSP_BLOCKED =
@@ -81,7 +97,7 @@ async function generateDirect(apiKey, prompt, { maxTokens, strong }) {
   const body = await resp.json().catch(() => ({}));
   if (!resp.ok) {
     const message = body?.error?.message || `Model provider returned ${resp.status}.`;
-    throw badRequest(resp.status === 401 ? `Anthropic rejected the saved API key: ${message}` : message, resp.status === 429 ? 429 : 502);
+    throw badRequest(resp.status === 401 ? `Anthropic rejected the API key: ${message}` : message, resp.status === 429 ? 429 : 502);
   }
   // The text block, wherever it sits — a model that thinks by default
   // returns its (empty-text) thinking block first.
@@ -115,13 +131,15 @@ export async function generateTextViaWorkflow(prompt, { maxTokens = 300, strong 
   return textOf(body);
 }
 
-/** The direct route (saved key), falling back to the proxy when no key is saved. */
+/** The direct route (the key held for this tab), falling back to the proxy when none is held. */
 export async function generateTextDirect(prompt, { maxTokens = 300, strong = false } = {}) {
-  const apiKey = await getAnthropicApiKey();
-  if (apiKey) return generateDirect(apiKey, prompt, { maxTokens, strong });
+  if (tabApiKey) return generateDirect(tabApiKey, prompt, { maxTokens, strong });
   const base = proxyUrl();
   if (!base) {
-    throw badRequest("AI isn't configured: enter your Anthropic API key under Studio Settings → Preferences, or switch the AI route to the ISC workflow.", 503);
+    throw badRequest(
+      "AI isn't configured for the direct route: enter your Anthropic API key under Studio Settings → Preferences in this tab (it isn't kept between reloads), or switch the AI route to the ISC workflow.",
+      503
+    );
   }
   return generateViaProxy(base, prompt, { maxTokens, strong });
 }

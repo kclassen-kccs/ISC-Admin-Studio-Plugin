@@ -45,5 +45,7 @@ signed-in user's session instead. ISC runs the steps for real in that mode but
 refuses it for an enabled workflow; the plugin says so if it finds it enabled.
 
 The route is chosen per user on Studio Settings → Preferences → AI Route. The
-"Direct from this browser" route (saved Anthropic key, `lib/aiProxy.js`) is
-kept for when ISC allows plugins to make outbound calls.
+"Direct from this browser" route (`lib/aiProxy.js`, a key typed on
+Preferences and held in memory for the open tab only) is kept for when ISC
+allows plugins to make outbound calls. The plugin persists the key nowhere;
+ISC Parameter Storage is its only home.
