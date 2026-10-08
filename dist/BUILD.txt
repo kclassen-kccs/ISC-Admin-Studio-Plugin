@@ -1,0 +1,4 @@
+Admin Studio ISC UI plugin 3.4.10
+Packaged 2026-10-08T19:50:33Z from commit 32d2d13 (the commit before the one that carries this file)
+Contents: sp-ui-plugin.json, client/build/, install.sh, INSTALL.md
+No source, credentials or API keys are included.

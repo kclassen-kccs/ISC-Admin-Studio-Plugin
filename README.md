@@ -105,6 +105,15 @@ The plugin is reachable at its own URL
 (`https://<tenant>.identitynow.com/ui/plugin/<plugin-id>`) until navbar
 customization is available in ISC.
 
+### Distributable package
+
+[`dist/`](dist/) holds the deployable plugin for tenants that don't build from
+source: `admin-studio-plugin.zip` (manifest, built app, `install.sh`,
+`INSTALL.md`, `BUILD.txt`), with the install script and notes alongside.
+`npm run dist` rebuilds it (`-- --no-build` to package the current
+`client/build`); it is rebuilt with every plugin change, so `dist/` always
+matches the source. See [`dist/INSTALL.md`](dist/INSTALL.md).
+
 ## Manifest
 
 [`sp-ui-plugin.json`](sp-ui-plugin.json) is the contract with ISC. The
@@ -127,6 +136,7 @@ Validate it offline with `npm run validate`.
 | `npm start` | HTTPS dev server for use with `sail ui-plugins link` |
 | `npm run build` | Production build into `client/build` |
 | `npm run deploy` | Build, then `sail ui-plugins upload` |
+| `npm run dist` | Build, then package `dist/admin-studio-plugin.zip` with the install script |
 | `npm run validate` | Offline manifest check |
 | `npm run version:bump` | Bumps the version across package manifests |
 
