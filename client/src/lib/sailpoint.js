@@ -50,6 +50,7 @@ import * as PortedSegmentRoleMatches from "./ported/segmentRoleMatches";
 import * as PortedSegmentScans from "./ported/segmentScans";
 import * as PortedAccessSegmentScans from "./ported/accessSegmentScans";
 import * as PortedParameters from "./ported/parameters";
+import * as PortedOpsSuggestions from "./ported/opsSuggestions";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -2104,36 +2105,38 @@ export async function searchFailedEvents({ days = 7, limit = 250 } = {}) {
   return searchEvents({ days, failedOnly: true, limit });
 }
 
+// Ported to lib/ported/opsSuggestions.js (the old /api/insights/ops routes):
+// the AI analysis runs through lib/aiProxy.js, so by default on the tenant's
+// "Admin Studio AI Query" workflow, and the saved suggestions live in this
+// browser's IndexedDB per tenant.
+
 // The saved suggestion for one event ({ suggestion: null } when none yet).
 export async function getEventFixSuggestion(eventId) {
-  const resp = await axios.get(`${API_BASE}/api/insights/ops/suggest/${encodeURIComponent(eventId)}`, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.getEventFixSuggestion(eventId);
 }
 
 // [{ eventId, generatedAt }] — every event with a saved suggestion.
 export async function listEventFixSuggestions() {
-  const resp = await axios.get(`${API_BASE}/api/insights/ops/suggestions`, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.listEventFixSuggestions();
 }
 
-// { suggestion, cached } — the server's AI analysis of one failed event.
+// { suggestion, cached } — the AI analysis of one failed event.
 export async function suggestEventFix(event, { refresh = false } = {}) {
-  const resp = await axios.post(`${API_BASE}/api/insights/ops/suggest`, { event, refresh }, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.suggestFix("event", event, { refresh });
 }
 
 // The same analysis for the other things that can fail — kind is "event"
-// (an audit event), "accountActivity" (an account-activities document) or
-// "connectorLog" ({ id, sourceName, connector, requestID, lines }). Saved
-// suggestions are read back with getEventFixSuggestion(aiSuggestionCacheId(…)).
+// (an audit event), "accountActivity" (an account-activities document),
+// "connectorLog" ({ id, sourceName, connector, requestID, lines }) or
+// "workflowExecution". Saved suggestions are read back with
+// getEventFixSuggestion(aiSuggestionCacheId(…)).
 export async function suggestFix(kind, item, { refresh = false } = {}) {
-  const resp = await axios.post(`${API_BASE}/api/insights/ops/suggest`, { kind, item, refresh }, { headers: authHeaders() });
-  return resp.data;
+  return PortedOpsSuggestions.suggestFix(kind, item, { refresh });
 }
 
 // An audit event keeps its bare id, so it shares its saved suggestion with
 // Tools > Operations; the other kinds are prefixed (mirrors the server).
-export const aiSuggestionCacheId = (kind, id) => (kind === "event" ? String(id) : `${kind}:${id}`);
+export const aiSuggestionCacheId = PortedOpsSuggestions.aiSuggestionCacheId;
 
 // ─── Certification campaigns (Browse > Certifications) ──────────────────────
 // ISC's campaign objects themselves (any type, however created), via the
