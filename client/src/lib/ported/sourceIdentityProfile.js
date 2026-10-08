@@ -4,14 +4,16 @@
  * create-identity-profile,sync-identity-profile}.
  *
  * The old routes asked Claude to match a source's schema attributes to the
- * tenant's Identity Attributes (mapSourceAttributesToIdentitySchema). With no
- * AI available in the plugin that helper behaves exactly as it did on a
- * server where AI wasn't configured: it returns no mappings. So create
- * wires just uid/displayName, and sync reports every new schema attribute in
+ * tenant's Identity Attributes (mapSourceAttributesToIdentitySchema); so does
+ * this, through lib/aiProxy.js (the "Admin Studio AI Query" workflow by
+ * default). When the model can't be reached it behaves as the server did
+ * with no AI configured: it returns no mappings, create wires just
+ * uid/displayName, and sync reports every new schema attribute in
  * `unmatchedNames` rather than auto-mapping it.
  */
 
 import { iscGet, iscPost, iscPatch, withApiRetry, routeError, badRequest } from "../isc";
+import { generateText } from "../aiProxy";
 import { routeErrorMessages } from "./sourceErrors";
 import { getCredentials } from "../sailpoint";
 
@@ -28,9 +30,33 @@ function describeIdentityAttributeTransform(transform) {
   return transform.type || "Mapped";
 }
 
-// No AI in the plugin — see the file header.
-async function mapSourceAttributesToIdentitySchema() {
-  return [];
+// Asks the model to match source schema attributes to the tenant's Identity
+// Attributes catalog — structured (not prose) output, parsed as JSON.
+// Low-confidence/no-match attributes are left out by the model rather than
+// guessed, since a wrong identity attribute mapping is worse than a missing one.
+async function mapSourceAttributesToIdentitySchema(sourceAttrs, identityAttrs) {
+  if (!sourceAttrs?.length || !identityAttrs?.length) return [];
+  const sourceList = sourceAttrs.map((a) => `- ${a.name}${a.description ? ` (${a.description})` : ""}`).join("\n");
+  const identityList = identityAttrs.map((a) => `- ${a.name}: ${a.displayName}`).join("\n");
+  try {
+    const raw = await generateText(
+      `Match each SOURCE ATTRIBUTE below to the single best IDENTITY ATTRIBUTE it should populate, based only on ` +
+        `name/description similarity. Skip any source attribute with no confident match — do not guess.\n\n` +
+        `SOURCE ATTRIBUTES:\n${sourceList}\n\nIDENTITY ATTRIBUTES:\n${identityList}\n\n` +
+        `Respond with ONLY a JSON array, no other text, no markdown fences: ` +
+        `[{"sourceAttribute": "...", "identityAttribute": "..."}]`,
+      { maxTokens: 1000 }
+    );
+    const text = (raw || "").replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) return [];
+    const sourceNames = new Set(sourceAttrs.map((a) => a.name));
+    const identityNames = new Set(identityAttrs.map((a) => a.name));
+    return parsed.filter((m) => m?.sourceAttribute && m?.identityAttribute && sourceNames.has(m.sourceAttribute) && identityNames.has(m.identityAttribute));
+  } catch (err) {
+    console.error("[sources] AI schema mapping failed, continuing with no extra mappings:", err.response?.data || err.message);
+    return [];
+  }
 }
 
 // The Identity Profile whose authoritative source is this one (there's at

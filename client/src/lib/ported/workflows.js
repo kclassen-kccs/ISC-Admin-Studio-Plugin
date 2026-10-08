@@ -4,7 +4,7 @@
  * talk to ISC: structural validation against the tenant's workflow library
  * (POST /validate), delete (disable first), save (disable → PUT → re-enable)
  * and enable/disable. The AI routes (/ai/outline, /ai/create, /:id/ai/modify,
- * /:id/flowchart) need the server's model access and are not ported.
+ * /:id/flowchart) are in ./workflowAi.js.
  *
  * Each export returns the same body the route used to send. Failures throw
  * routeError()/badRequest() so callers still read err.response.data.error.

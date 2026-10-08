@@ -8,15 +8,16 @@
  * plus evaluateRoleAlgorithmic and its helpers, which the old server shared
  * with its bulk Role Evaluation scan.
  *
- * AI: the old suggest route asked Claude to review the computed proposal. There
- * is no AI provider in the plugin, so suggestRoleComposition returns the
+ * AI: suggestRoleComposition asks the model (through lib/aiProxy.js) to review
+ * the computed proposal, as the old route did; when that fails it returns the
  * computed proposal with ai.error set to the same "AI isn't configured" message
  * the server used when no provider was configured. Evaluation itself never used
  * AI (aiUsed is always false).
  */
 
-import { iscGet, iscPost, withApiRetry, routeError, badRequest } from "../isc";
+import { iscGet, iscPost, withApiRetry, routeError, badRequest, describeError } from "../isc";
 import { recordStore } from "../store";
+import { generateText } from "../aiProxy";
 import {
   tenantKey,
   currentUser,
@@ -1254,10 +1255,13 @@ export async function getRoleComposition(roleId) {
  *
  * The CHANGES come from proposeRoleComposition — arithmetic against the
  * tenant's Entitlement Commonality setting, so they're reproducible and every
- * id is real. The old server also asked Claude for a review of the proposal;
- * there is no AI provider in the plugin, so `ai` carries the same "AI isn't
- * configured" message the server returned when no provider was set up. Nothing
- * is saved here.
+ * id is real. AI's job is the part arithmetic can't do: read the proposal as
+ * an access reviewer would, explain it, and flag individual changes that
+ * look risky. It never adds or removes items itself; any id it mentions that
+ * isn't in the proposal is discarded. The model call goes through
+ * lib/aiProxy.js (the "Admin Studio AI Query" workflow by default); when it
+ * fails, `ai.error` says so and the computed proposal stands. Nothing is
+ * saved here.
  */
 export async function suggestRoleComposition(roleId) {
   if (!/^[A-Za-z0-9-]+$/.test(String(roleId))) throw badRequest("Invalid role id.");
@@ -1275,7 +1279,44 @@ export async function suggestRoleComposition(roleId) {
 
     const ai = { used: false, summary: null, cautions: [] };
     if (changeCount > 0) {
-      ai.error = "AI isn't configured on this server, so the proposal below is the computed one without an AI review.";
+      const line = (c) => `    - [${c.id}] ${c.name}${c.source?.name ? ` (${c.source.name})` : ""}: ${c.holders} holders, ${c.percent}%`;
+      const levelText = (title, n, lvl) => [
+        `${title} — ${n} member${n === 1 ? "" : "s"}`,
+        lvl.add.length ? `  ADD:\n${lvl.add.map(line).join("\n")}` : "  ADD: none",
+        lvl.remove.length ? `  REMOVE:\n${lvl.remove.map((c) => `${line(c)}${c.becauseCommonAccess ? "  [already granted by Common Access]" : c.becauseBase ? "  [moves to the base role]" : ""}`).join("\n")}` : "  REMOVE: none",
+      ].join("\n");
+      const prompt = [
+        "You are reviewing a proposed change to an identity-governance role, as an experienced access reviewer would.",
+        `The role "${comp.role.name}" grants entitlements automatically to everyone matching its membership rule. The proposal below was computed from how many of the role's actual members hold each entitlement, against a commonality threshold of ${T}%: items at or above it are added, items below it are removed, and nothing already granted by an in-scope Common Access role is kept.`,
+        comp.commonAccessRoles.length ? `Common Access roles in scope: ${comp.commonAccessRoles.map((c) => c.name).join(", ")}.` : "No Common Access roles are in scope.",
+        smallPopulations.length ? `Small populations (percentages here are weak evidence): ${smallPopulations.map((p) => `${p.level} (${p.memberCount})`).join(", ")}.` : "",
+        "",
+        levelText("BASE ROLE", comp.base.memberCount, proposal.base),
+        ...proposal.dimensions.filter((d) => d.add.length || d.remove.length).map((d) => levelText(`DIMENSION "${d.name}"`, d.memberCount, d)),
+        "",
+        "Respond with ONLY a JSON object, no prose around it:",
+        '{ "summary": "<=120 words, plain English: what this change does to the role and whether it looks sound>", "cautions": [ { "id": "<an entitlement id from the list above, copied exactly>", "note": "<=30 words: why a human should look at this one before applying>" } ] }',
+        "Use cautions sparingly — only for a change that is genuinely questionable: removing something nearly everyone holds, adding something that sounds privileged or administrative, a change resting on a very small population, or same-named entitlements from different sources being treated differently. Do not invent ids. If nothing is questionable, return an empty cautions array.",
+      ].filter((l) => l !== "").join("\n");
+      try {
+        const text = await generateText(prompt, { maxTokens: 1200, strong: true });
+        const match = String(text || "").match(/\{[\s\S]*\}/);
+        const parsed = match ? JSON.parse(match[0]) : null;
+        if (parsed && typeof parsed.summary === "string") {
+          const known = new Set([...proposal.base.add, ...proposal.base.remove, ...proposal.dimensions.flatMap((d) => [...d.add, ...d.remove])].map((c) => c.id));
+          ai.used = true;
+          ai.summary = parsed.summary.slice(0, 1500);
+          ai.cautions = (Array.isArray(parsed.cautions) ? parsed.cautions : [])
+            .filter((c) => c && known.has(c.id) && typeof c.note === "string")
+            .slice(0, 25)
+            .map((c) => ({ id: c.id, note: c.note.slice(0, 300) }));
+        } else {
+          ai.error = "The AI review came back in an unexpected form, so only the computed proposal is shown.";
+        }
+      } catch (err) {
+        console.warn("[roles] composition suggest: AI review failed:", err.response?.status || err.message);
+        ai.error = `The AI review couldn't be completed (${describeError(err)}), so only the computed proposal is shown.`;
+      }
     }
 
     return {

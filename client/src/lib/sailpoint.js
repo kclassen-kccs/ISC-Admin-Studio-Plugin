@@ -51,6 +51,8 @@ import * as PortedSegmentScans from "./ported/segmentScans";
 import * as PortedAccessSegmentScans from "./ported/accessSegmentScans";
 import * as PortedParameters from "./ported/parameters";
 import * as PortedOpsSuggestions from "./ported/opsSuggestions";
+import * as PortedJsonRepair from "./ported/jsonRepair";
+import * as PortedWorkflowAi from "./ported/workflowAi";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
 const API_BASE = "";
@@ -1991,8 +1993,7 @@ export async function setAccountEnabled(accountId, enabled) {
 // { fixed, explanation } for text that doesn't parse — `fixed` is verified
 // by the server to parse. `error` is JSON.parse's own message for the text.
 export async function fixJsonWithAi(text, error) {
-  const resp = await axios.post(`${API_BASE}/api/ai/fix-json`, { text, error }, { headers: authHeaders() });
-  return resp.data;
+  return PortedJsonRepair.fixJsonWithAi(text, error);
 }
 
 // ─── Launchers (Browse > Launchers) ─────────────────────────────────────────
@@ -2698,16 +2699,14 @@ export async function getWorkflow(id) {
 // and feedback, that outline revised. Every trigger / step id in it is a real
 // id from the tenant's workflow library. Can take a minute.
 export async function draftWorkflowOutline({ requirements, outline, feedback }) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/ai/outline`, { requirements, outline, feedback }, { headers: authHeaders() });
-  return resp.data.outline;
+  return (await PortedWorkflowAi.draftWorkflowOutline({ requirements, outline, feedback })).outline;
 }
 
 // Builds the approved outline into a full workflow and saves it DISABLED:
 // { workflow, placeholders } — placeholders are REPLACE_WITH_… values still to
 // fill in. A 422 carries { problems } when it couldn't be made valid.
 export async function createWorkflowFromOutline({ requirements, outline }) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/ai/create`, { requirements, outline }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflowAi.createWorkflowFromOutline({ requirements, outline });
 }
 
 // The app's own structural check of a workflow ({ workflow }) or an AI-create
@@ -2726,8 +2725,7 @@ export async function validateWorkflowDraft(payload) {
 // `base` ({ name, description, trigger, definition }) proposes against UNSAVED
 // editor content instead of the saved workflow — the diff is then against it.
 export async function proposeWorkflowModification(id, { instructions, proposal, feedback, base }) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/${id}/ai/modify`, { instructions, proposal, feedback, base }, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflowAi.proposeWorkflowModification(id, { instructions, proposal, feedback, base });
 }
 
 // Deletes a workflow. ISC won't delete an enabled one, so the server disables
@@ -2775,11 +2773,10 @@ export async function patchObjectJson(resource, id, ops) {
   return PortedJsonEdit.patchObjectJson(resource, id, ops);
 }
 
-// { svg } — Claude renders the workflow's step graph as a flowchart SVG
-// (server-side; see POST /api/workflows/:id/flowchart).
+// { svg } — the model renders the workflow's step graph as a flowchart SVG
+// (lib/ported/workflowAi.js, the old POST /api/workflows/:id/flowchart).
 export async function generateWorkflowFlowchart(id) {
-  const resp = await axios.post(`${API_BASE}/api/workflows/${id}/flowchart`, {}, { headers: authHeaders() });
-  return resp.data;
+  return PortedWorkflowAi.generateWorkflowFlowchart(id);
 }
 
 // ─── Transforms ─────────────────────────────────────────────────────────────
