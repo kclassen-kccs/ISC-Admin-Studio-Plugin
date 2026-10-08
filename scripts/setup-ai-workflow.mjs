@@ -8,7 +8,7 @@
  *     header name x-api-key, header value = a PLACEHOLDER. Replace it with the
  *     real key in ISC (Admin → Parameter Storage) or on the plugin's Browse →
  *     Parameters page. This script never takes the key.
- *   - Workflow "Admin Studio AI Query" (isc/admin-studio-ai-query.workflow.json)
+ *   - Workflow "Admin Studio AI Query" (client/src/lib/aiWorkflow.template.json)
  *     bound to the key parameter, left DISABLED on purpose: the plugin runs
  *     it through the test endpoint with the signed-in user's session.
  *
@@ -92,7 +92,7 @@ const parameters = await api("GET", "/v2026/parameter-storage/parameters?limit=2
 const connection = await ensureParameter(parameters, { name: CONNECTION_NAME, description: "Anthropic Messages API endpoint used by the Admin Studio AI Query workflow.", type: "2.4", publicFields: { url: ANTHROPIC_URL } }, {}, ownerId);
 const key = await ensureParameter(parameters, { name: KEY_NAME, description: "Anthropic API key sent as the x-api-key header by the Admin Studio AI Query workflow. Replace the placeholder header value with the real key.", type: "1.3", publicFields: { headerName: "x-api-key" } }, { headerValue: PLACEHOLDER }, ownerId);
 
-const template = JSON.parse(readFileSync(join(here, "../isc/admin-studio-ai-query.workflow.json"), "utf8"));
+const template = JSON.parse(readFileSync(join(here, "../client/src/lib/aiWorkflow.template.json"), "utf8"));
 template.definition.steps["Query Claude"].attributes.param_header.paramID = key.id;
 template.enabled = false;
 const workflows = await api("GET", "/v2026/workflows?limit=250");

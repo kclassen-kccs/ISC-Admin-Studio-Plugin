@@ -22,7 +22,7 @@
  * endpoint runs the same steps for real with the signed-in user's session; it
  * only requires the workflow to stay DISABLED, which is how it is created.
  *
- * isc/admin-studio-ai-query.workflow.json and scripts/setup-ai-workflow.mjs
+ * lib/aiSetup.js (from the Preferences key field) or scripts/setup-ai-workflow.mjs
  * create the parameters and the workflow on a tenant.
  */
 

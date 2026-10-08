@@ -52,6 +52,7 @@ import * as PortedAccessSegmentScans from "./ported/accessSegmentScans";
 import * as PortedParameters from "./ported/parameters";
 import * as PortedOpsSuggestions from "./ported/opsSuggestions";
 import * as PortedJsonRepair from "./ported/jsonRepair";
+import * as AiSetup from "./aiSetup";
 import * as PortedWorkflowAi from "./ported/workflowAi";
 
 // Kept for call sites that still prefix URLs with it; same-origin, so empty.
@@ -1988,6 +1989,15 @@ export async function setAccountEnabled(accountId, enabled) {
   const resp = await axios.post(`${API_BASE}/api/isc/v2025/accounts/${accountId}/${enabled ? "enable" : "disable"}`, {}, { headers: authHeaders() });
   return resp.data;
 }
+
+// ─── AI through ISC — tenant setup from the Preferences key field ──────────
+// Creates or updates the "Admin Studio AI Connection" and "Admin Studio AI
+// Key" parameters and the "Admin Studio AI Query" workflow for the given key.
+// { connection, key, workflow } each { id, action }.
+export async function provisionAiWorkflow(apiKey) {
+  return AiSetup.provisionAiWorkflow(apiKey);
+}
+export const describeAiSetup = AiSetup.describeAiSetup;
 
 // ─── JSON editors — AI syntax repair ────────────────────────────────────────
 // { fixed, explanation } for text that doesn't parse — `fixed` is verified
