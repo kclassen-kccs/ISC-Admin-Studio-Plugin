@@ -1,5 +1,7 @@
 # App Store Listing — Admin Studio
 
+> **Archived.** This listing was written for the native iOS build of the earlier standalone app. The iOS app was removed when Admin Studio became an ISC UI plugin; nothing here describes the plugin. Kept for reference only.
+
 Copy for each App Store Connect field. Character limits noted per field;
 counts verified against the limit.
 

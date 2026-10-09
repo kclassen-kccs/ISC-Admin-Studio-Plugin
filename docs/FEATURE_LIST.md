@@ -8,47 +8,62 @@ for domain-term definitions see [GLOSSARY.md](GLOSSARY.md).
 
 **Navigation shell:** six top-level tabs — **Home**, **Browse**, **Tools**,
 **Mining** (Role Mining), **Backup & Restore**, **Studio Settings** — plus a
-Profile screen and My Reports, both reachable via the avatar icon outside
-the tab bar. Every tab with sub-links is a collapsible section header in
-the sidebar (clicking expands it; it doesn't navigate). The sidebar shows
-an "Admin Studio" tenant box (click opens the tenant's ISC UI in a new
-tab), a three-color auth-strength indicator (green = strong auth, amber =
-"elevated" — calls run on the tenant's service credential, red = not
-strongly authenticated), a Log out entry, and the app version. On every
-screen the TopBar title is itself a dropdown menu for jumping between
-sibling screens of the same tab; on narrow viewports a hamburger opens a
-nav drawer.
+Profile screen (avatar icon on Home) and My Reports (Home's quick action).
+Every tab but Home is a collapsible section header in the sidebar (clicking
+expands it; it doesn't navigate; the section holding the current route opens
+on its own). Browse and Mining sub-links are sorted A–Z by label. The sidebar
+shows only the links and the app version; there is no tenant box, no sign-in
+indicator and no log-out: ISC's App Shell signs the user in and the plugin
+runs with that session. On every screen the TopBar title is itself a
+dropdown menu for jumping between sibling screens of the same tab; on narrow
+viewports a hamburger opens a nav drawer.
 
 Browse and Mining each gain a conditional sub-link, shown only when a
 tenant has the Multi-Company/Division Boundary enabled *and* its own
-"Create Data Segments" toggle on (set in Studio Settings → Mining Config):
-**Data Segments** under Browse (inserted just above Roles) and **Segments
-by Metadata** under Mining.
+"Create Data Segments" toggle on (set in Studio Settings → Schema Analysis):
+**Data Segments** under Browse and **Data Segments** under Mining. The two
+**Segments** sub-links (ISC access-request Segments) are always shown.
 
 ---
 
 ## Home
 
 ### "Dashboard"
-- "At a glance" metric tiles: Identities, Sources, Roles, Common Access
-  Roles counts — each clickable, deep-links to the relevant list/scan.
+- **"Admin Studio" banner** across the top: shield icon, the words "Admin
+  Studio" and, under them, the tenant's instance badge name (or site name,
+  or tenant). Display only, not a link. Coloured with the tenant's instance
+  badge colour from ISC's UI metadata when the badge is visible, with black
+  or white text chosen by brightness; the default blue look otherwise (and
+  when the metadata can't be read, e.g. by a non-ORG_ADMIN account).
+- "At a glance" metric tiles: Identities ("Total in tenant", counted from
+  the identities API), Sources ("Connected"), Roles ("Total in tenant"),
+  Common Access Roles ("Flagged as ISC common access": ISC's confirmed
+  common-access roles plus roles this plugin flagged or created as such,
+  counting only enabled roles that grant at least one entitlement) — each
+  clickable; Common Access Roles opens the latest Role Statistics Refresh
+  scan, or the Role Evaluation list if there is none. A tile ISC answers
+  403 for shows "—" with "No access for this account".
 - "Active Role Statistics" section (shown once a Role Statistics Refresh
-  has run): "Roles OK" / "Roles Needing Updates" tiles, color-coded by SOD
-  violation vs. plain update-needed vs. clean; "SOD Violation!" /
-  "Mitigated SOD Present" labels; "As of" timestamp; both tiles link to
-  full scan results.
-- "Quick actions": "View my N reports" (if any exist).
-- Manual refresh icon; log-out icon; avatar → Profile.
+  has completed): "Roles OK" (green) / "Roles Needing Updates" (red when
+  any SOD violation is counted, amber when updates are needed without SOD,
+  green otherwise); "SOD Violation!" / "Mitigated SOD Present" labels; "As
+  of" timestamp; both tiles open that scan's results. SOD counts follow the
+  current "check SOD violations" setting.
+- "Quick actions": "View my N reports" (only when the user has saved
+  reports).
+- Header: Refresh (re-runs the counts, role stats and reports, then
+  "Dashboard refreshed"); avatar initial → Profile. There is no log-out.
 - A tenant that has never run Schema Analysis is redirected to Studio
-  Settings → Schema Analysis once per browser session.
+  Settings → Schema Analysis once per browser session per tenant.
 
 ---
 
 ## Browse
 
-Sub-links: Identities, (conditionally Data Segments), Roles, Entitlements,
-Access Profiles, Applications, Sources, Workflows, Forms, Launchers,
-Transforms, Metadata, User Certifications.
+Sub-links (A–Z): Access Profiles, Applications, (conditionally Data
+Segments), Entitlements, Forms, Governance Groups, Identities, Launchers,
+Metadata, Org Info, Parameter Storage, Roles, Segments, Sources, Transforms,
+User Certifications, Workflows.
 
 Most detail screens share two things worth knowing once:
 
@@ -109,8 +124,8 @@ Most detail screens share two things worth knowing once:
   per-type value editors, Add property/Add item, Paste JSON over this
   subtree, Duplicate item, Remove; Undo/Redo), Text mode (live-highlighted
   textarea with "Valid JSON" / "Invalid JSON: …" status — and, while it's
-  invalid, **Fix with AI**: the server sends the text and the parser's
-  message to the configured AI provider, asking for a SYNTAX-only repair
+  invalid, **Fix with AI**: the plugin sends the text and the parser's
+  message to the AI route (see Preferences), asking for a SYNTAX-only repair
   (no renamed keys, changed values or reformatting), and verifies the
   result parses (one retry if not; nothing is changed on failure; 60,000
   character limit). The editor then shows "What's wrong" — a plain-language
@@ -190,7 +205,7 @@ Most detail screens share two things worth knowing once:
   cloudLifecycleState through a transform, an amber note says so (which
   source attribute / transform): a manual change takes effect now but ISC
   recalculates it at the next identity refresh, so it only lasts if the
-  source agrees — change it at the source for a lasting change. The server
+  source agrees — change it at the source for a lasting change. The plugin
   refuses a state id that isn't on the identity's own profile rather than
   passing it to ISC. Success refreshes the identity and its Activity tab.
 - Tabs: **Details** (email, alias, manager, lifecycle state, last refresh,
@@ -382,7 +397,7 @@ Most detail screens share two things worth knowing once:
     — on WARN / ERROR lines — **Explain and suggest a fix with AI**, which
     sends that line plus up to 60 lines around it from the same connector
     command (request id), with passwords, tokens, keys, auth headers and
-    JWTs redacted server-side first. ISC
+    JWTs redacted in the browser first. ISC
     pages the stream oldest-first — the first 8 pages load on their own,
     then "Load newer lines". A play/pause icon runs a live tail (like
     `sail conn logs tail`): every 5s it fetches lines newer than the newest
@@ -419,18 +434,18 @@ Most detail screens share two things worth knowing once:
 - Name, image version, image ID, created, ID, whether it's assigned to
   this source; full-width Edit Script and Assign / Remove buttons.
 - **Script** — ISC stores only a customizer's built image and never
-  returns its source, so the script is kept by the app's server (per
-  tenant + customizer). Shown read-only with its status: draft / deployed
+  returns its source, so the script is kept by the plugin in this browser's
+  storage (per tenant + customizer; another browser can't show it). Shown read-only with its status: draft / deployed
   as version N (when, by whom) / draft has undeployed changes / ISC has
   moved to a newer version uploaded outside the app. A customizer built
   outside the app (CLI) has no stored script — its code can't be shown,
   and deploying one from here replaces it.
 - **Create / edit dialog** — name + JavaScript (CommonJS) script, seeded
-  with a starter template. Validate (syntax + static checks on the server:
+  with a starter template. Validate (syntax + static checks in the browser:
   exports connectorCustomizer, known before…/after… handler names, at
   least one handler, only @sailpoint/connector-sdk and Node built-ins
   required — the script is parsed, never executed), Save Draft (no ISC
-  call), Validate & Deploy / Validate & Create. Deploy has the server
+  call), Validate & Deploy / Validate & Create. Deploy has the plugin
   build index.js (the script + a stand-in for the slice of
   @sailpoint/connector-sdk a customizer uses) into a ZIP and upload it as
   the customizer's next version — no npm or bundler, so other npm packages
@@ -580,7 +595,7 @@ Most detail screens share two things worth knowing once:
       identity.
     - **Every add or remove confirms first**, showing what the review found:
       an item an in-scope Common Access role already grants is **blocked**
-      from the base role (the server never lets a role repeat Common Access,
+      from the base role (the plugin never lets a role repeat Common Access,
       so it's shown as "won't be added" rather than silently dropped) and
       **warned** about on a dimension; adding to a dimension something the
       base role already grants is warned; adding to the base role something
@@ -635,9 +650,9 @@ Most detail screens share two things worth knowing once:
     single-valued attribute (e.g. Environment) already holding a different
     value → a failure that says so — "Environment holds one value and this
     role already has "Development". Remove that value first…" — it is
-    never silently replaced. Every failure's reason is logged server-side.
+    never silently replaced. Every failure's reason is in the result sheet.
     The single-object + button does the same and says "It already has that
-    value — nothing changed". The server works a few at a time, probes
+    value — nothing changed". The plugin works a few at a time, probes
     the API root once per run, and one failure doesn't stop the rest; up to
     2,000 objects per run. Success is a toast ("Added "SG" to 40 roles · 3
     didn't have it"); failures open a dialog naming each object and why.
@@ -675,8 +690,9 @@ Most detail screens share two things worth knowing once:
 - Per-row: name, source · owner, Requestable / No Requests pill;
   click-through to Entitlement Detail.
 - Bulk select: Generate Descriptions (AI, review sheet), Change Owner,
-  Make Requestable, No Requests, Email Report (one PDF per owner,
-  published to a link — nothing auto-sends; entitlements with no owner or
+  Make Requestable, No Requests, Email Report (one PDF per owner, with a
+  pre-filled mailto and a link that opens only in this browser's My Reports
+  — nothing auto-sends; entitlements with no owner or
   an owner without an email are skipped and listed; "Download All as
   ZIP"), Print Selected.
 
@@ -823,9 +839,8 @@ Most detail screens share two things worth knowing once:
      listed in the success message. The workflow is saved **disabled**,
      owned by the signed-in user, and opens on its Workflow (flowchart)
      tab for review; it is never enabled automatically. Each call can take
-     up to a minute or two. Uses the server's "strong" model
-     (AI_STRONG_MODEL / BEDROCK_STRONG_MODEL_ID, default Claude Opus 5)
-     rather than the small model the other AI features use. The
+     up to a minute or two. Uses the strong model (Claude Opus) rather than
+     the small model the other AI features use. The
      description and the tenant's library names are sent to the AI
      provider.
 
@@ -847,7 +862,7 @@ Most detail screens share two things worth knowing once:
   - **Saving an enabled workflow** (JSON tab and step editor alike) — ISC
     rejects any update to an enabled workflow ("failed to update workflow
     because it is enabled: not allowed"). Save therefore asks first —
-    "Disable, Save & Re-enable" — and the server does it as one operation:
+    "Disable, Save & Re-enable" — and the plugin does it as one operation:
     disable, PUT, re-enable, restoring the enabled state even when the PUT
     is rejected so a bad edit never leaves a live workflow off. An edit
     that itself sets enabled: false leaves it disabled. The confirm is
@@ -882,7 +897,7 @@ Most detail screens share two things worth knowing once:
     workflow as it is in the editor (saved or not), the problems verbatim,
     and an instruction to fix exactly those and change nothing else; the
     result must pass validation. Shown inline: what would change (computed
-    by the server), the AI's explanation, notes and placeholders, with
+    locally from the two definitions), the AI's explanation, notes and placeholders, with
     Apply / Dismiss — nothing changes until applied, and nothing is saved
     until Validate & Save. In the JSON editor Apply replaces the JSON; in
     the step editor it applies that step's part and says which other steps
@@ -890,8 +905,8 @@ Most detail screens share two things worth knowing once:
     validation errors open a dialog (rather than a toast) offering
     "Propose a Fix with AI", which opens the Modify with AI review already
     working on a fix for exactly ISC's errors.
-  - **Workflow** — an SVG flowchart of the definition, rendered by the AI
-    provider on the server and sanitized before display (trigger node, one
+  - **Workflow** — an SVG flowchart of the definition, drawn by the AI
+    route and sanitized before display (trigger node, one
     node per step, labelled choice branches, "otherwise" default edges);
     unavailable when no AI provider is configured. Click any node to open
     the step editor; Interactive Form steps with a literal form ID also get
@@ -907,13 +922,13 @@ Most detail screens share two things worth knowing once:
     support. A failed run offers **Explain and suggest a fix with AI** —
     the AI gets the run, the workflow's trigger and step list and the
     event history (failures in full, the rest one line each), with
-    passwords, tokens, keys, auth headers and JWTs redacted server-side
+    passwords, tokens, keys, auth headers and JWTs redacted in the browser
     first, and is asked to name the step and what to change in it. Saved
     per execution, like the other AI explanations (see Tools >
     Operations).
 - **Modify with AI** — describe a change in plain language; the AI returns
   a PROPOSAL, and nothing touches ISC until it's approved. The review
-  shows, in order: *What would change* — computed by the server from the
+  shows, in order: *What would change* — computed locally from the
   two definitions (steps added / removed / changed, trigger, first step,
   name, description), so it doesn't rest on the model's own account; *The
   AI's explanation* — one sentence per change; *Check before you rely on
@@ -960,6 +975,41 @@ Most detail screens share two things worth knowing once:
   as you fill it in; Submit is permanently disabled — forms are submitted
   by their workflow), **Inputs** (one card per declared input), **JSON**
   (shared Raw JSON panel).
+
+### "Governance Groups"
+- Every ISC governance group (the API's workgroups), all pages fetched,
+  sorted A–Z. Search (name, description, owner name — URL-backed); paged.
+- Header: Create Governance Group (+) — "Create governance group" dialog:
+  Name, Description, Owner (single identity search); Name and Owner
+  required; opens the new group when created.
+- Row: name, description · "Owner: <name>", "N members" / "N connections".
+  Click opens the group. No bulk select.
+
+### "Governance Group" (detail)
+- Header: **Edit** (same dialog; only changed fields are sent as a JSON
+  Patch), **Delete** (confirm, destructive; when ISC reports connections the
+  confirmation says "ISC reports N connection(s) to it — check the Usage
+  tab first"; returns to the list).
+- Summary: name, "N members · Owner: <name>".
+- Vertical tab rail (?tab=, URL-backed):
+  - **Details** — description, Owner, Owner e-mail, Members, Connections,
+    Created, Modified, Group ID.
+  - **Members** — filter (name/email), "Select all shown" and per-row
+    checkboxes ("X of N members"); rows (avatar, name, email) open the
+    identity. Add members (person-plus) searches identities (25 per
+    search, existing members hidden), picks collect as removable chips,
+    "Add N members". Bulk Remove (N) (confirm, destructive). Adds and
+    removes go through ISC's bulk add / bulk delete in chunks of 100, with
+    per-chunk failures reported.
+  - **Usage** — where the group is used: ISC's own connections list
+    (Access request reviewer, Owner, Management workgroup) merged with a
+    full scan of roles, access profiles, sources, SOD policies and
+    workflows for the group's id. Each row: type · how it's used
+    ("Additional owner", "Access request approver", "Revoke request
+    approver", "Violation owner", "Referenced in workflow steps"); rows
+    open the object (SOD policies aren't links). Entitlements appear only
+    when ISC reports them as connections (they aren't scanned). Objects
+    that couldn't be checked are listed in amber; Rescan.
 
 ### "Launchers"
 - Every ISC Launcher (a named start button for a workflow run as an
@@ -1033,7 +1083,7 @@ Most detail screens share two things worth knowing once:
     warning that roles / access profiles / entitlements tagged with them
     lose the tag and data segment filters referencing them stop matching.
     ISC rejects a save that shortens the values list (400.1 "semantically
-    invalid"), so the server deletes value by value through ISC's per-value
+    invalid"), so the plugin deletes value by value through ISC's per-value
     delete (falling back to a JSON-Patch remove of the value's index if the
     tenant doesn't serve that route) and reports each outcome: a success
     toast with the count deleted, and an error toast naming what wasn't
@@ -1041,7 +1091,7 @@ Most detail screens share two things worth knowing once:
     stays selected. Only an attribute whose type is exactly "custom" gets the
     selection controls; any other attribute (including one with no type)
     is treated as built-in and shows "This is a built-in attribute, so its
-    values can't be deleted." The server enforces the same rule on every
+    values can't be deleted." The plugin enforces the same rule on every
     metadata write (Values tab, value JSON editor, attribute Raw JSON tab):
     an edit that would drop a built-in attribute's value — removing it, or
     changing its technical name — is refused with a 403, while in-place
@@ -1153,7 +1203,7 @@ Most detail screens share two things worth knowing once:
       campaign's rows in one file per report type, with a leading Campaign
       column; header is the union of the campaigns' columns so none is
       dropped; pick one report to get a single file). A line states how many
-      files will be fetched. **Get Reports** fetches them — the server
+      files will be fetched. **Get Reports** fetches them — the plugin
       first runs any report never run or whose file has expired, so it can
       take up to a minute per such report, and if ISC answers "conflicting
       operation in progress" (a scan or another report still running on that
@@ -1164,7 +1214,7 @@ Most detail screens share two things worth knowing once:
       outcome) and says to wait a minute. Up to 25 campaigns per request.
     - **Step 2, "Reports ready":** every fetched file listed with its name,
       campaign, report, size, row count when consolidated, and "freshly run"
-      when the server had to run it. Each row has its own **Download**
+      when the plugin had to run it. Each row has its own **Download**
       button (turns into a green "Saved" once used); with more than one
       file, a **Download all N as a ZIP** button at the top builds the ZIP
       in the browser from the same bytes (total size shown). Reports that
@@ -1195,11 +1245,117 @@ Most detail screens share two things worth knowing once:
 
 ---
 
+### "Parameter Storage"
+- Every ISC Parameter Storage parameter, sorted A–Z. Search (name,
+  description, type label, primary value — URL-backed); category filter
+  pills ("All" plus each category from the tenant's specifications,
+  URL-backed); "N parameters"; paged.
+- Row: checkbox, name, "<type label> · <primary field value>", owner name
+  (wider screens). Click opens the parameter.
+- Header: **New Parameter** (+; disabled until the specifications load);
+  **Print** (when the list isn't empty) — "Basic list" (name, type, primary
+  value, owner) or "Detailed list" (every field per parameter, secrets
+  masked) as a PDF, covering the selection if anything is selected,
+  otherwise everything shown.
+- "Select all" covers the whole filtered list. Bulk: Print Detail for
+  Selected; Delete Selected Parameters (confirm, destructive, one at a
+  time with progress; the confirmation warns that ISC refuses to delete a
+  parameter that is still referenced, e.g. by a workflow).
+- **"New Parameter" dialog** — type picker grouped by category, built from
+  the tenant's specification document (`/parameter-storage/specifications`,
+  requested in English); consumer-managed types left out, licensed types
+  marked "(licensed)" with a note when a type needs a license or feature
+  flag. Then Name, Description, Owner (defaults to the signed-in user) and
+  the type's fields with the primary field marked *; enum → select,
+  string[] → one per line, int → number.
+- **Secrets.** Private fields (passwords, client secrets, header values)
+  are typed into masked inputs with a show/hide eye, labelled "(stored
+  encrypted)", and encrypted in the browser before sending with the same
+  scheme as ISC's own UI: a P-384 key exchange with SailPoint's Parameter
+  Storage enclave over a verified AWS Nitro attestation, sent as a compact
+  JWE. ISC never returns a secret and the plugin never shows one again. If
+  ISC rejects the encrypted secret (400), everything else is still saved
+  and a "Created/Saved without the <field>" dialog shows ISC's reason and
+  tracking ID.
+- **Test panel** (for types whose fields allow it: OAuth2 client
+  credentials, Entra ID, Basic, Header, Entra tenant lookup, URL
+  reachability) — not available in the plugin: those tests need outbound
+  calls the plugin's content security policy forbids, so the panel
+  reports that instead of a result.
+
+### "Parameter" (detail)
+- Header: **Edit** (same form; the type is fixed and public fields are
+  pre-filled; secret fields start blank meaning "leave blank to keep the
+  stored value" and are sent in their own PATCH after the other fields),
+  **Delete** (confirm, destructive; ISC refuses while the parameter is
+  still referenced; returns to the list).
+- Summary: name, "<category> · <type>".
+- Vertical tab rail (?tab=): **Details** (Name, Description, Category,
+  Type label + id, Owner, Last modified by, "Secret last changed" by when
+  set, ID); **Fields** (every field in specification order, primary
+  tagged; private fields show a lock and "••••••••"); **References** (what
+  uses the parameter: name, consumer id, usage hint; "Not referenced… so it
+  can be deleted" when none); **JSON** (read-only, Copy JSON, public fields
+  only).
+
+### "Org Info"
+- The tenant's org config (`GET /v2026/org-config`), read-only. Header:
+  org name and time zone ("No time zone set" when empty).
+- Vertical tab rail (?tab=):
+  - **Details** in sections: General (Org name, Time zone); Features
+    (Segmentation, Machine account discovery, SAF activated, Lifecycle
+    state change honors source enable/disable, Entitlement stickiness
+    disabled, Non-org-admins can manage ISC entitlements); AI &
+    Recommendations (Certification recommendations, Access request
+    recommendations, Harbor Pilot, Natural language search, AI agent
+    delete requests); Access Risk Management (every arm* field, or "Not
+    configured on this tenant."); Other settings (any field not named
+    above, so new ISC fields still show). Booleans as On/Off pills; empty
+    values "Not set".
+  - **SOD** — "SoD Report Columns (X of N included)": Order, Column,
+    Included, Required; a message when the config has none.
+  - **JSON** — the org config as ISC returns it, with Copy JSON.
+
+### "Segments" (ISC access-request Segments)
+These are ISC's Segments, a different object from the plugin's Data
+Segments: no draft/publish lifecycle, a Segment is simply Active or
+Inactive.
+- Every ISC Segment (`/v2026/segments`), sorted A–Z. Name search and
+  All / Active / Inactive pills (URL-backed); "N segments"; paged. Empty
+  state points to Mining → Segments.
+- Row: checkbox, name, then the description or a readable member rule
+  (`department = "Sales" AND …`), and an **Active / Inactive pill that is
+  itself a toggle** (a JSON Patch of /active). Click opens the segment.
+- Header **Print**: "Basic list" (name, description, status) or "Detailed
+  list" (member rule plus roles, access profiles and entitlements per
+  segment) as a PDF, covering the selection, otherwise everything shown.
+- "Select all" covers the whole filtered list. Bulk (one at a time with
+  progress, failures reported): Activate, Deactivate, Print Detail for
+  Selected, Delete Selected Segments (confirm, destructive).
+
+### "Segment" (detail)
+- Header: Activate or Deactivate (whichever applies), Delete (confirm,
+  destructive; returns to the list). The summary's Active/Inactive pill is
+  clickable too.
+- Vertical tab rail (?tab=): **Details** (Description, Owner, Created,
+  Modified; Members section with the member rule; Access section with
+  Roles, Access Profiles and Entitlements counts); **Identities** (the
+  identities the member rule currently matches, from identity search,
+  server-paged 50 per page with ISC's total, name search URL-backed; rows
+  show job title · department and open the identity); **Roles** and
+  **Access Profiles** (items assigned to this segment, paged; roles show
+  their entitlement count, access profiles their source, disabled items
+  marked); **Entitlements** (grouped by source with the same collapsible
+  roll-up as Data Segments, search, expand/collapse all); **JSON** (full
+  definition; Edit JSON sends only the changed fields as a JSON Patch).
+
+---
+
 ## Tools
 
-Sub-links: Base64, URL Encode, Operations. Base64 and URL Encode run
-entirely in the browser — nothing is sent anywhere; Operations reads the
-tenant's event log.
+Sub-links: Event Log, Base64, URL Encode. Base64 and URL Encode run
+entirely in the browser — nothing is sent anywhere; Event Log reads the
+tenant's audit events.
 
 ### "Base64"
 - One input textarea; "Base64 Encode" / "Base64 Decode" (disabled while
@@ -1213,42 +1369,53 @@ tenant's event log.
   only); "Encode" / "Decode" (disabled while empty).
 - Result panel with Copy; "Error" panel on invalid percent-encoding.
 
-### "Operations"
-- Recent failed events from ISC's events search index (status Failed,
-  Error or Incomplete), newest first, up to 250, auto-refreshed every
-  minute; header Refresh.
-- Search (name, type, action, actor, target, objects — URL-backed); window
-  pills 24 hours / 7 days / 30 days (URL-backed) with a shown / total
-  count.
-- Row: event name, time, type, actor → target, status pill; click opens
-  the event sheet.
-- Event sheet: "Suggested fix" panel with "Suggest a fix with AI" — the
-  server asks the configured AI provider for the likely cause and concrete
-  correction steps based only on the event's own fields. The suggestion is
-  saved per event on the server, shown again automatically whenever the
-  event is reopened (with when it was generated), and marked with a
-  sparkle icon on the event's row in the list; Regenerate replaces it;
-  503 when no AI provider is configured. **AI explanations** elsewhere use
-  the same route and the same saved-suggestion store: failed events on a
-  source's or identity's Activity tab (same cache entry as here, so an
-  event explained in one place shows as explained in the other), account
-  activities that didn't complete (identity Activity — the AI also gets
-  each account operation, its attribute changes and result), and WARN /
-  ERROR lines on a SaaS source's Logs tab (the line plus its surrounding
-  lines from the same connector command, secrets redacted first) — then
-  Details (any error / warning / message text highlighted, plus status,
-  type, action, operation, technical name, actor, target, objects, stack,
-  tracking number, IP, created, ID, and every attribute — every value
-  shown in full and word-wrapped, attribute objects pretty-printed) and
-  JSON tabs.
+### "Event Log"
+- The tenant's audit events from ISC's events search index, newest first,
+  up to 250, auto-refreshed every minute; header Refresh.
+- "Show" pills (URL-backed): **All** / **Failed** (status Failed, Error or
+  Incomplete) / **Retryable Failures** (failures whose recorded error looks
+  transient: timeout, connection reset or refused, network unreachable,
+  429 / rate limited, 502/503/504, temporarily unavailable, lock
+  contention — never one whose error points to a real fix: access denied,
+  401/403, invalid credentials, not found / 404, validation or schema
+  errors). Failed and Retryable use their own query, so the 250 cap applies
+  to failures only; a footer note says when the cap is hit.
+- Window pills 24 hours / 7 days / 30 days (URL-backed, default 7 days)
+  with an "X of N" count. Search (name, technical name, type, action,
+  actor, target, objects, status, stack — URL-backed).
+- Row: event name, time, type, actor → target, status pill, a blue
+  retry-reason pill ("timeout", "rate limited", …) on retryable failures,
+  and a sparkle when a fix has been suggested; click opens the event sheet.
+- Event sheet, for failed events: "Suggested fix" panel with "Suggest a fix
+  with AI" — the plugin asks the AI route (the tenant's "Admin Studio AI
+  Query" workflow by default) for the likely cause and concrete correction
+  steps based only on the event's own fields, secrets redacted first. The
+  suggestion is saved per event in this browser's plugin storage, per
+  tenant, shown again whenever the event is reopened ("AI-generated from
+  this event's own fields on <date> — saved for this event; verify before
+  acting"), and marked with the sparkle on the row; Regenerate replaces
+  it; a clear message when the tenant has no AI workflow set up. **AI
+  explanations** elsewhere use the same route and the same saved-suggestion
+  store: failed events on a source's or identity's Activity tab (same
+  entry as here, so an event explained in one place shows as explained in
+  the other), account activities that didn't complete (identity Activity —
+  the AI also gets each account operation, its attribute changes and
+  result), and WARN / ERROR lines on a SaaS source's Logs tab (the line
+  plus its surrounding lines from the same connector command, secrets
+  redacted first). Then Details (any error / warning / message text
+  highlighted, plus status, type, action, operation, technical name,
+  actor, target, objects, stack, tracking number, IP, created, ID, and
+  every attribute — every value shown in full and word-wrapped, attribute
+  objects pretty-printed) and a read-only JSON tab.
 
 ---
 
 ## Mining (Role Mining)
 
-Sub-links: Role Model Drafts, Role Evaluation, Skeleton Roles, Attribute
-Sync, Mail Distribution Groups, User Certifications, and conditionally
-Segments by Metadata.
+Sub-links (A–Z): Attribute Sync, (conditionally Data Segments), Mail
+Distribution Groups, Role Evaluation, Role Model Drafts, Segments, Skeleton
+Roles, User Certifications. (The "Segments by Metadata" screens below are
+what the conditional Data Segments link opens.)
 
 Scan-detail screens (Role Model Draft, Role Evaluation, Segments Draft)
 use a two-pane layout on medium-and-wider viewports: a left rail listing
@@ -1508,8 +1675,8 @@ card on the right.
   value-create response all omit it. The only place it can be read is a
   segment whose role filter was picked by hand in ISC's segment editor:
   ISC writes the GUID there, beside the ENTITLEMENT filter's technical
-  name for the same value. Every time Data Segments are listed the server
-  harvests those pairs and remembers them per tenant, so a value needs to
+  name for the same value. Every time Data Segments are listed the plugin
+  harvests those pairs and remembers them per tenant in this browser, so a value needs to
   be picked in ISC only once — after that, every create / conversion using
   that value gets a resolved ROLE filter automatically. Until a value's
   GUID is known its ROLE filter falls back to the technical name and the
@@ -1553,6 +1720,46 @@ card on the right.
 - After creation a toast reports how many entitlements and roles were
   tagged (explicit-selection drafts instead warn about segments that hit
   the 50-item Access Model limit).
+
+---
+
+### "Segments" (Mining launcher)
+- Proposes one ISC access-request Segment per Multi-Company/Division
+  Boundary value combination: members are the boundary filter; access is
+  every role, access profile and entitlement those members hold, found with
+  identity search. Separate from Data Segments; nothing is created until
+  the draft is reviewed. Header gear → Mining Config.
+- **Scan for Segments** — disabled until the Boundary is enabled with at
+  least one attribute (an amber note points to Schema Analysis); otherwise
+  shows "Boundary: <attr> + <attr>".
+- "Segments Drafts" list: status (Running / Completed / Failed /
+  Cancelled), start time, "N boundary values · N proposed segments";
+  Running drafts can be Cancelled, finished ones Removed (no confirmation).
+  Drafts live in this browser's plugin storage per tenant; the list
+  refreshes every 4 s while one runs, otherwise every 15 s.
+
+### "Segments Draft" (scan detail)
+- Status, start time, live progress ("Scanned N objects…", then "Searching
+  members' access… N done"), any error, "Boundary: …", "N boundary values
+  found". Two-pane layout from medium viewports up.
+- Proposed segments: one per boundary value combination, named "<values>
+  Segment", with "N members · N roles · N access profiles · N
+  entitlements"; members as boundary pills ("<attr> = <value>"); roles as
+  pills, access profiles and entitlements as pills grouped by source (every
+  pill opens the object); a failed access search shown per segment.
+- Status tags: **Created** / **Added** (green, link to the ISC Segment,
+  date, "Assigned x/y roles · … — N failed"); **Exists** (amber: a Segment
+  of that name already exists, so creating adds this access to it).
+- Header **Create All Segments (N)**, or "Select all" plus bulk **Create
+  Selected (N)** (only segments not yet created or added are selectable).
+  The confirmation says how many new Segments will be created and how many
+  existing ones receive access, with an "Activate new Segments" checkbox
+  (on by default); progress "Creating segments… (x of y done)". Create
+  makes the Segment (owner = you, member rule = boundary filter) or reuses
+  the existing one of that name, then assigns each item by adding the
+  segment id to the item's own `segments` list (keeping its other
+  segments); results and assignment failures are reported.
+- Header Print prints the draft as a PDF.
 
 ---
 
@@ -1749,7 +1956,7 @@ Certifications, Preferences.
   failed" overlay with Retry / Continue / Cancel; on finish "Change Log
   PDF" and Close.
 - **Appearance** — System (default, follows the OS), Light, or Dark.
-  Per-user, server-side, syncs across devices.
+  Per-user, kept in this browser.
 - **AI Route** — ISC workflow (default) or Direct from this browser. The
   workflow route runs the tenant's "Admin Studio AI Query" workflow, which
   takes its URL from the "Admin Studio AI Connection" parameter and its
@@ -1769,73 +1976,23 @@ Certifications, Preferences.
   key typed here only until the tab is closed or reloaded.
 - **JSON Edit Mode** — Text (default) or Tree: the view every JSON editor
   opens in (workflows, transforms, forms, launchers, metadata, source JSON,
-  raw JSON panels). Per-user and synced across devices like Appearance.
+  raw JSON panels). Per-user, kept in this browser like Appearance.
   JSON that doesn't parse always opens in Text regardless, since Tree
   can't show it, and each editor's own Tree | Text tabs still switch views
   for that one edit.
-- Sign out.
 
 ---
 
 ## Outside the tab bar
 
 ### "Profile"
-- Avatar/display name, tenant.
-- Sign out.
-- Session info: Tenant, Signed in as, SailPoint ISC API version,
-  Application version.
-- "OAuth token (decoded)": Show/Hide claims, "Renew Token" (fresh access
-  token — useful right after an admin grants new OAuth scopes),
-  `strong_auth` status, explanation of why admin calls need it.
+- Avatar initial, display name (falls back to "Admin") and the tenant UI
+  host. Read-only; the plugin has no sign-out, since ISC's App Shell owns
+  the session.
+- "Session" card: Tenant (UI host), Signed in as (username), SailPoint ISC
+  API version (v2026), Application version.
 
 ### "My Reports"
 - List of generated/saved PDF reports (e.g. Role Composition Email
   Reports). Click to open/download (falls back to download if pop-up
   blocked).
-
-### Login
-- Tenant-name combobox (autocompletes registered tenants) + "Continue to
-  SailPoint" (OAuth redirect).
-- "Local Admin" entry in the same combobox (shown only when the server has
-  `LOCAL_ADMIN_USERNAME`/`LOCAL_ADMIN_PASSWORD` configured) — swaps the
-  form to username/password with "Sign in as Local Admin". 5 failed
-  attempts lock the account for 15 minutes (enforced server-side).
-- Deep-link auto-login (`?tenant=...`); an unrecognized tenant shows an
-  informational "Invalid tenant specified" dialog.
-- On the web build, a note says "New tenants are set up by an
-  administrator (Local Admin sign-in)". The native (Capacitor/iOS) build
-  keeps an in-page "Set up a new tenant…" link that opens the same
-  Register-a-tenant form described below.
-
-### "Local Admin" (dedicated page — the only screen this session can see)
-- "Registered OAuth clients" list (site name, tenant, client ID — never
-  secrets), each expandable into a "Sign-ins" list of who has signed into
-  that tenant, and each with Remove (confirm; un-registers from this
-  server only, the client in SailPoint is untouched).
-- "Register a tenant" (collapsible) — Tenant name, Site name, Admin PAT
-  Client ID, Admin PAT Client secret; creates or replaces the tenant's
-  sign-in client in ISC. The PAT is kept, encrypted, as the tenant's
-  service credential — used only when a signed-in user's token lacks
-  strong auth (the amber "elevated" indicator).
-  - **Tenant name: short name or full host.** A plain name ("acme")
-    connects to `acme.api.identitynow-demo.com`, as before. A name
-    containing a "." is a **full host, used exactly as entered with only
-    `https://` added** — no domain is appended — e.g.
-    `acme.api.identitynow.com`. It should be the tenant's API host; its web
-    UI host (sign-in page, "Manage in ISC" links) is derived by dropping the
-    ".api" label. A line under the field shows the exact URL that will be
-    used as you type. A pasted `https://`, path, port or trailing dot is
-    dropped; an address on the default domain
-    (`acme.identitynow-demo.com`, `acme.api.identitynow-demo.com`)
-    collapses to the short name so existing registrations keep resolving.
-    The whole string is the tenant's key everywhere (login dropdown,
-    per-tenant settings and scan records).
-  - Because that host is where the server sends requests — and registration
-    can be called anonymously — a full host is accepted only as a plain
-    lowercase DNS name (no scheme, port, path, credentials or IP address)
-    ending in an allowed domain: `identitynow.com` or
-    `identitynow-demo.com` by default, replaceable with the
-    `TENANT_HOST_SUFFIXES` environment variable. A failed registration for
-    a full host with no ".api" part adds a hint to enter the API host
-    rather than the web address.
-- Sign out. Every other API route refuses this session.

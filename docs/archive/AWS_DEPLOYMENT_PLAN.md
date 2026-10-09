@@ -1,5 +1,7 @@
 # AWS Deployment — As-Built Record & Original Plan
 
+> **Archived.** This records the AWS deployment of the earlier standalone app (Express server, OAuth sign-in, DynamoDB and S3). The ISC UI plugin has no server and is deployed with the SailPoint CLI instead; see [../../dist/INSTALL.md](../../dist/INSTALL.md). Kept as an operational record of that environment.
+
 **Status: DEPLOYED (2026-08-17).** Production runs on AWS at
 https://adminstudio.kccs.net; Vercel + Railway
 (https://adminstudio.vercel.app) is the permanent test environment. The

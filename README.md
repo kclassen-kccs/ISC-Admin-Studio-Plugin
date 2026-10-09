@@ -40,19 +40,19 @@ ISC App Shell ──postMessage──▶ Admin Studio (React, sandboxed iframe)
   CSP allows no outside origins. Anything that needs a server (see below) is
   not possible inside the plugin.
 
-## Status of the port
+## What runs where
 
 | Area | State |
 |---|---|
-| Identities, roles (incl. dimensions, members, entitlements, propagation), sources (schemas, accounts, aggregation, identity profiles, apps, datasets, resources), connector customizers, Common Access flags, SOD mitigations, role evaluation | Ported to the client |
-| Remaining generic ISC pages (entitlements, access profiles, applications, workflows, forms, transforms, launchers, campaigns, etc.) | Work through `/api/isc` where they already did; routes with dedicated server logic still being ported |
-| Role mining scans, skeleton scans, attribute sync, data segments, schema analysis, tenant settings, preferences, reports, backup and restore, parameters | Not yet ported. Calls return a "not yet available in the plugin" error (HTTP 501) |
-| AI-generated descriptions and workflow AI | Removed. The plugin CSP allows no outside calls |
-| LDAP lookups | Removed |
-| Capacitor / iOS app | Removed |
+| Browse (identities, roles, entitlements, access profiles, applications, sources, workflows, forms, governance groups, launchers, transforms, metadata, certifications, Parameter Storage, org info, segments), Tools, Mining scans, Backup & Restore, Studio Settings, reports | Run in the browser against the tenant API |
+| Role mining, role evaluation, schema analysis, segment and attribute-sync scans | Ported from the old server into `client/src/lib/ported/`; scans run in the page while the tab is open |
+| AI (descriptions, Event Log fix suggestions, JSON repair, workflow drafting and modification, flowcharts, role composition review, identity-attribute mapping) | Through the tenant's "Admin Studio AI Query" workflow by default; the key lives in ISC Parameter Storage, never in the plugin. See [isc/README.md](isc/README.md) |
+| LDAP tools, parameter connection tests | Not available in the plugin (they need outbound calls the plugin CSP forbids); the screens say so |
+| Requests, Approvals, Tasks, the iOS build, sign-in screens | Removed; ISC's own UI covers them |
 
-`server/` still holds the old Express code as reference for the remaining
-port and will be deleted when the port is finished.
+`server/` still holds the old Express code as a reference for the port. It is
+not built, deployed or packaged. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+has the full picture.
 
 ## Prerequisites
 
@@ -74,10 +74,15 @@ port and will be deleted when the port is finished.
 
 ```bash
 npm run install:all                 # root and client dependencies
-sail ui-plugins create --private    # register the plugin; visible only to you
+sail ui-plugins create --private    # register YOUR dev copy; visible only to you
 sail ui-plugins link                # bind your dev server; prints the developer URL
 npm start                           # HTTPS dev server on port 3000
 ```
+
+`--private` is for a developer's own registration only. A tenant's real
+installation is registered without it (ISC decides who may open the plugin;
+a private registration gives everyone else "Forbidden" at launch); see
+[dist/INSTALL.md](dist/INSTALL.md).
 
 Open the URL `link` prints (`…/ui/plugin/<plugin-id>?spPluginDev=admin-studio`).
 ISC loads your local code in the real tenant with a **Local Dev** badge, a real
@@ -141,6 +146,17 @@ Validate it offline with `npm run validate`.
 | `npm run validate` | Offline manifest check |
 | `npm run version:bump` | Bumps the version across package manifests |
 
+## AI setup
+
+AI calls run through an ISC workflow on the tenant so that no key is ever in
+the browser. An admin opens Studio Settings → Preferences in the plugin and
+uses **Save to ISC** under Anthropic API Key: the key is written, encrypted,
+into the "Admin Studio AI Key" parameter, and the "Admin Studio AI
+Connection" parameter and the "Admin Studio AI Query" workflow are created
+if missing. The workflow must stay disabled; the plugin runs it as a test
+execution with the user's session. [isc/README.md](isc/README.md) has the
+details and `scripts/setup-ai-workflow.mjs` does the same from a terminal.
+
 ## Project structure
 
 ```
@@ -155,19 +171,29 @@ client/
       sailpoint.js       All API functions and the axios interceptor
       isc.js             Shared helpers for ported server logic
       store.js           IndexedDB record store
+      aiProxy.js         generateText: AI route dispatch
+      aiWorkflow.js      Runs the "Admin Studio AI Query" workflow
+      aiSetup.js         Creates the AI parameters and workflow from the key field
       ported/            Route logic moved from the old Express server
     pages/ components/   Screens and UI primitives
+dist/                    Deployable package, install scripts and INSTALL.md
+isc/                     What the plugin expects on a tenant (AI workflow)
+scripts/                 package-dist.sh, setup-ai-workflow.mjs, bump-version.js
+ai-proxy/                Optional fallback service for the direct AI route (unused today)
 server/                  Old Express server, kept only as port reference
-docs/                    Earlier documentation for the standalone app
+docs/                    Documentation (below)
 ```
 
 ## Documentation
 
-The files in [docs/](docs/) describe the earlier standalone web/iOS app
-(Express proxy, OAuth sign-in, AWS deployment). They remain useful for what
-each screen does ([USER_GUIDE.md](docs/USER_GUIDE.md),
-[FEATURE_LIST.md](docs/FEATURE_LIST.md), [GLOSSARY.md](docs/GLOSSARY.md)), but
-the architecture, auth and deployment sections no longer apply.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the plugin is put together.
+- [docs/USER_GUIDE.md](docs/USER_GUIDE.md): a walkthrough of every screen.
+- [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md): the per-screen inventory of actions and rules.
+- [docs/GLOSSARY.md](docs/GLOSSARY.md): the terms the plugin adds on top of ISC's.
+- [docs/PRODUCT_DESCRIPTION.md](docs/PRODUCT_DESCRIPTION.md): product copy.
+- [dist/INSTALL.md](dist/INSTALL.md): installing the packaged plugin on a tenant.
+- [isc/README.md](isc/README.md): the AI workflow and parameters on the tenant.
+- [docs/archive/](docs/archive/README.md): the earlier standalone app (server, OAuth, AWS, iOS), kept as a record.
 
 ## License
 
