@@ -1,6 +1,6 @@
 # Glossary
 
-Terms this app introduces on top of standard SailPoint ISC concepts. Each
+Terms this plugin introduces on top of standard SailPoint ISC concepts. Each
 entry cites where the definition comes from in code, and links to the ISC
 product documentation for the underlying platform concept it builds on.
 
@@ -17,7 +17,7 @@ in common, beyond the base role's entitlements.
 
 > "A dimension's entitlements are those every member sharing that value
 > holds, minus what the base role already grants."
-> — `server/index.js:2479-2480`
+> — `client/src/lib/ported/roleMiningShared.js` (`buildPeerGroups`)
 
 Managed on the **Dimensions** tab of Role Detail; proposed automatically by
 [Role Scan](#role-scan-aka-role-model-draft) and flagged as missing/stale by
@@ -42,7 +42,7 @@ A Common Access role's entitlements only count as "birthright" for another
 role if the Common Access role's own membership criteria is a **superset** of
 the target role's — i.e., everyone eligible for the target role is also
 eligible for the Common Access role (`criteriaLeavesSubsetOf`,
-`server/index.js:5267-5299`). This is why Role Evaluation and Role Scan both
+`client/src/lib/ported/roleCommonAccess.js`). This is why Role Evaluation and Role Scan both
 show a **Common Access picker** before running: you choose which overlapping
 Common Access roles should be excluded from "missing entitlement" suggestions
 so birthright access isn't double-proposed.
@@ -58,7 +58,7 @@ sharing some combination of attributes *and* enough entitlements in common
 to be worth turning into a role. Role Scan tries the broadest attribute
 combination first, so people who vary only on some attributes end up as one
 Dynamic role with [dimensions](#dimension), rather than being fragmented into
-many narrow roles (`buildPeerGroups`, `server/index.js:2420`).
+many narrow roles (`buildPeerGroups`, `client/src/lib/ported/roleMiningShared.js`).
 
 ---
 
@@ -89,7 +89,7 @@ nothing yet to safely grant.
 
 Looks at identity *attributes* (not entitlements) and scores which 1–2
 attributes best divide the tenant into peer groups, using a normalized-entropy
-× coverage score (`scoreSchemaAttributes`). Replaces a hardcoded
+× coverage score (`client/src/lib/ported/schemaAnalysis.js`). Replaces a hardcoded
 department/location assumption — its output feeds the grouping attributes
 used by [Role Scan](#role-scan-aka-role-model-draft) and [Skeleton Scan](#skeleton-role).
 
@@ -101,7 +101,7 @@ A **Studio Settings → Schema Analysis** toggle. When enabled, Role Mining
 produces a separate set of role drafts *per distinct combination* of up to
 two chosen attribute values (e.g. one pass per Company, or per
 Company + Division) instead of one tenant-wide pass
-(`server/index.js:4401-4413`). The same partitioning also drives
+(`partitionProfilesByBoundary`, `client/src/lib/ported/roleMiningShared.js`). The same partitioning also drives
 [Data Segments](#data-segments) generation.
 
 ---
@@ -125,8 +125,8 @@ Related ISC concept: [Managing Data Segments](https://documentation.sailpoint.co
 Compares a role's currently-granted entitlements against what its **actual
 current members** hold today — computed live (`evaluateRoleMembershipMembers`),
 not from ISC's search index, since that can't be trusted for this comparison.
-As of the app's v2.x line this is a **deterministic algorithm**
-(`evaluateRoleAlgorithmic`, `server/index.js:5337`), not an LLM call — an
+This is a **deterministic algorithm**
+(`evaluateRoleAlgorithmic`, `client/src/lib/ported/roleEvaluation.js`), not an LLM call — an
 earlier AI-based version of this specific feature was tried and removed.
 
 For each role it flags:
@@ -144,7 +144,8 @@ Related ISC concept: [Separation of Duties](https://documentation.sailpoint.com/
 
 ### SOD mitigation
 
-A time-limited, persisted exception (`server/data/sod-mitigations.json`) that
+A time-limited exception, kept in this browser's plugin storage (the
+`sod-mitigations` record store), that
 suppresses an active Separation-of-Duties violation from being reported until
 it expires, **without removing** the conflicting entitlements. The
 alternative in Role Evaluation's Repair flow is to actually remove the
@@ -168,7 +169,7 @@ Related ISC concept: [Propagating Role Changes](https://documentation.sailpoint.
 
 ### Role Statistics Refresh
 
-A scheduled (hourly/daily/weekly) background [Role Evaluation](#role-evaluation)
-scan across every role in the tenant, configured in **Studio Settings →
-Preferences**. Its most recent run feeds the Home screen's pass /
-needs-update / SOD stat tiles.
+A [Role Evaluation](#role-evaluation) pass across every role in the tenant,
+started with **Run Now** (the plugin has no background scheduler, so the
+old app's hourly/daily/weekly schedule is gone). Its most recent run feeds
+the Home screen's pass / needs-update / SOD stat tiles.
