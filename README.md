@@ -190,6 +190,7 @@ docs/                    Documentation (below)
 - [docs/USER_GUIDE.md](docs/USER_GUIDE.md): a walkthrough of every screen.
 - [docs/FEATURE_LIST.md](docs/FEATURE_LIST.md): the per-screen inventory of actions and rules.
 - [docs/GLOSSARY.md](docs/GLOSSARY.md): the terms the plugin adds on top of ISC's.
+- [docs/ROLE_MINING_PROMPTS.md](docs/ROLE_MINING_PROMPTS.md): AI prompts that recreate the role-mining logic.
 - [docs/PRODUCT_DESCRIPTION.md](docs/PRODUCT_DESCRIPTION.md): product copy.
 - [dist/INSTALL.md](dist/INSTALL.md): installing the packaged plugin on a tenant.
 - [isc/README.md](isc/README.md): the AI workflow and parameters on the tenant.

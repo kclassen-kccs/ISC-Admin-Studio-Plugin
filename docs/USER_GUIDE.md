@@ -140,8 +140,9 @@ item on the left and the selected item's full card on the right.
 Start, list and cancel a peer-group discovery scan
 ([Role Scan](GLOSSARY.md#role-scan-aka-role-model-draft)). Each discovered
 [peer group](GLOSSARY.md#peer-group) shows members, entitlements and
-dimension previews. Create one role or all of them, with an AI
-name/description review step first; print the draft as a PDF.
+dimension previews. Create one role or all of them, with a review step
+first (names from Role Naming, descriptions drafted by AI); print the
+draft as a PDF.
 
 ### Role Evaluation
 
