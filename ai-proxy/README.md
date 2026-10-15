@@ -1,9 +1,18 @@
 # Admin Studio AI proxy
 
-A small stateless service that gives the Admin Studio ISC plugin access to a
-model without putting an API key in the browser. The plugin builds the prompt
-(from ISC data it fetches with the user's own token) and sends it here; this
-service returns generated text. Nothing is stored.
+A small stateless service that can give the Admin Studio ISC plugin access to
+a model without putting an API key in the browser. The plugin builds the
+prompt (from ISC data it fetches with the user's own token) and sends it
+here; this service returns generated text. Nothing is stored.
+
+**Not used by default, and not reachable from the plugin today.** The
+plugin's default AI route is the tenant's own "Admin Studio AI Query" ISC
+workflow (see [../isc/README.md](../isc/README.md)), which needs no service
+outside ISC. This proxy is the fallback of the "Direct from this browser"
+route, and ISC's plugin content security policy currently blocks every
+outbound call from the plugin iframe, so a build pointed at the proxy
+reports "ISC blocked the call" until SailPoint allows a connect-src origin.
+It is kept, with its tests, for when that changes.
 
 ```
 POST /v1/generate
@@ -32,11 +41,16 @@ npm test
 
 Set `ANTHROPIC_API_KEY`, or `AI_PROVIDER=bedrock` to use the host's IAM role.
 
-## Wire up the plugin
+## Wire up the plugin (when ISC allows it)
 
 1. Build the client with `REACT_APP_AI_PROXY_URL=https://<proxy-host>`.
-2. Allow that origin in `sp-ui-plugin.json` (`contentSecurityPolicies`, connect-src),
-   otherwise the iframe blocks the request.
+2. The plugin manifest would have to allow that origin for connect-src;
+   today `sp-ui-plugin.json` accepts only script-src and style-src policies,
+   so this step is not yet possible.
+3. Users pick "Direct from this browser" under Studio Settings → Preferences
+   → AI Route; without a key typed in the tab, the direct route falls back
+   to this proxy.
 
-Without `REACT_APP_AI_PROXY_URL` the AI buttons fail with a clear
-"AI isn't configured" message and everything else is unaffected.
+Without `REACT_APP_AI_PROXY_URL` and without a key, the direct route says
+"AI isn't configured for the direct route" and everything else is
+unaffected; the workflow route keeps working either way.

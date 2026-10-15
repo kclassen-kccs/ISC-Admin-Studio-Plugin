@@ -8,7 +8,7 @@
 import { iscGet, iscPost, withApiRetry, badRequest, routeError } from "../isc";
 import { getCredentials } from "../sailpoint";
 import { generateText } from "../aiProxy";
-import { getWorkflowCatalog, validateOutline, validateWorkflow, iscWorkflowErrorText } from "./workflows";
+import { getWorkflowCatalog, validateOutline, validateWorkflow, normalizeTrigger, iscWorkflowErrorText } from "./workflows";
 
 // ─── AI-drafted workflows (Workflows > Create with AI) ───────────────────────
 // Two stages, because they need different things:
@@ -159,7 +159,7 @@ export function buildPrompt({ requirements, outline, catalog, examples, usage, p
     "You are building a SailPoint Identity Security Cloud (ISC) workflow. The outline below has been reviewed and APPROVED by the administrator — implement exactly it: same trigger, same steps by the same names, wired exactly as its next / branches / otherwise say (the first step in the list is definition.start). The administrator may have reordered steps by hand, so trust the outline's links over the wording of any step's purpose — and remember a step can only read the output of steps that run BEFORE it on its path; if the order makes some data unavailable, take it from the trigger or leave a REPLACE_WITH_… placeholder rather than referencing a later step.",
     "",
     "Produce the complete workflow as ISC's API accepts it: { name, description, trigger: { type, attributes }, definition: { start, steps } }.",
-    "- trigger is { type, attributes }: type is the library trigger's type (EVENT, SCHEDULED, EXTERNAL, …) and attributes.id is its library id. An EVENT trigger that should only run sometimes gets attributes[\"filter.$\"]: a JSONPath filter over the trigger payload, e.g. \"$.changes[?(@.attribute == 'department')]\". A SCHEDULED trigger gets cronString / frequency / timeZone as the library lists them.",
+    "- trigger is { type, attributes }: type is the library trigger's type (EVENT, SCHEDULED, EXTERNAL, …) and attributes.id is its library id. An EVENT trigger that should only run sometimes gets attributes[\"filter.$\"]: a JSONPath filter over the trigger payload, e.g. \"$.changes[?(@.attribute == 'department')]\". A SCHEDULED trigger's attributes are exactly { \"id\": \"idn:cron-schedule\", \"cronString\": \"<5-field cron, e.g. 0 8 * * * for 08:00 daily>\", \"frequency\": \"cronSchedule\", \"timeZone\": \"<IANA zone, e.g. America/New_York>\" }: cronString and frequency are both required, and frequency is the literal cronSchedule.",
     "- definition.start is the first step's name; definition.steps maps each step name (the outline's names, spaces allowed) to its object. Give every step a displayName (its name).",
     "- An ACTION step: { type: \"action\", actionId, versionNumber (when the library gives one), attributes: { …its inputs… }, nextStep }.",
     "- A DECISION is a comparison operator step: { type: \"choice\", actionId: \"sp:compare-strings\" (or the compare operator the outline chose), choiceList: [{ comparator, \"variableA.$\": <JSONPath>, \"variableB.$\": <JSONPath> OR variableB: <literal>, nextStep }], defaultStep }. The key is choiceList (not choices); comparator must be one of the operator's allowed values verbatim; the first matching entry wins, otherwise defaultStep.",
@@ -194,7 +194,7 @@ export function modifyPrompt({ workflow, instructions, catalog, usage, previous,
     "You are modifying an existing SailPoint Identity Security Cloud (ISC) workflow for an ISC administrator. Make the change they ask for and NOTHING else: every step, attribute, name and link they didn't ask to change stays exactly as it is, character for character. Keep existing step names (other steps and running references use them); new steps get new, unique names.",
     "",
     "ISC workflow conventions:",
-    "- trigger is { type, attributes }: attributes.id is the trigger's library id; an EVENT trigger may carry attributes[\"filter.$\"], a JSONPath filter over its payload.",
+    "- trigger is { type, attributes }: attributes.id is the trigger's library id; an EVENT trigger may carry attributes[\"filter.$\"], a JSONPath filter over its payload; a SCHEDULED trigger's attributes are { \"id\": \"idn:cron-schedule\", \"cronString\": \"<5-field cron>\", \"frequency\": \"cronSchedule\", \"timeZone\": \"<IANA zone>\" } with cronString and frequency both required.",
     "- definition.start names the first step; definition.steps maps each step name to its object; steps carry a displayName.",
     "- An ACTION step: { type: \"action\", actionId, versionNumber (when the library gives one), attributes, nextStep }. It may have catch: [{ next }] for an error path.",
     "- A DECISION: { type: \"choice\", actionId: <a compare operator>, choiceList: [{ comparator, \"variableA.$\", \"variableB.$\" or variableB, nextStep }], defaultStep }. comparator must be one of the operator's allowed values verbatim.",
@@ -355,7 +355,7 @@ export async function createWorkflowFromOutline({ requirements: requirementsIn, 
       description: built.description || outline.description || "",
       owner: { type: "IDENTITY", id: getCredentials()?.identityId },
       definition: built.definition,
-      trigger: built.trigger,
+      trigger: normalizeTrigger(built.trigger),
       enabled: false,
     };
     const created = await iscPost("/v2026/workflows", body);
@@ -403,7 +403,7 @@ export async function proposeWorkflowModification(id, { instructions: instructio
     const proposed = {
       name: String(value.workflow.name || workflow.name).slice(0, 250),
       description: value.workflow.description ?? workflow.description ?? "",
-      trigger: value.workflow.trigger,
+      trigger: normalizeTrigger(value.workflow.trigger),
       definition: value.workflow.definition,
     };
     const strings = (list) => (Array.isArray(list) ? list.filter((x) => typeof x === "string" && x.trim()) : []);

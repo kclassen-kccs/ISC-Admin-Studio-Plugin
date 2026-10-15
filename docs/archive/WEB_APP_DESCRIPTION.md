@@ -1,5 +1,7 @@
 # Admin Studio — Product Description (Web App)
 
+> **Archived.** Marketing copy for the earlier standalone web app at adminstudio.kccs.net (hosted sign-in, proxy server). The current product description is [../PRODUCT_DESCRIPTION.md](../PRODUCT_DESCRIPTION.md).
+
 App Store–style marketing copy for the web application at
 adminstudio.kccs.net. Companion to [APP_STORE_LISTING.md](APP_STORE_LISTING.md)
 (the native iOS listing).

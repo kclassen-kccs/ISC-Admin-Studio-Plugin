@@ -219,6 +219,65 @@ function checkStepMap({ start, steps }, where, knownIds, problems) {
   }
 }
 
+// ─── Scheduled triggers ─────────────────────────────────────────────────────
+// The library describes idn:cron-schedule with one field, cronString, but
+// ISC's save validation also wants `frequency` ("supplied schedule frequency
+// is invalid. Schedule frequency cannot be empty") and the UI stores a
+// timeZone next to it. Every scheduled workflow on a real tenant carries
+// { id, cronString, frequency, timeZone, integrationId }; frequency is
+// "daily" / "weekly" (with the UI's dailyTimes / weeklyDays+weeklyTimes
+// companions) or "cronSchedule", the plain form that any cron string fits.
+
+export const SCHEDULED_TRIGGER_ID = "idn:cron-schedule";
+const CRON_FREQUENCY = "cronSchedule";
+// A frequency is only kept when the UI companions it implies are there too;
+// otherwise cronSchedule is the one form that is always valid.
+const FREQUENCY_COMPANIONS = { daily: ["dailyTimes"], weekly: ["weeklyDays", "weeklyTimes"], monthly: ["monthlyDays", "monthlyTimes"] };
+
+export function isScheduledTrigger(trigger) {
+  return trigger?.type === "SCHEDULED" || trigger?.attributes?.id === SCHEDULED_TRIGGER_ID;
+}
+
+/** A 5-field cron expression (minute hour day month weekday); ISC also keeps 6-field ones it created itself. */
+export function isCronString(value) {
+  if (typeof value !== "string") return false;
+  const fields = value.trim().split(/\s+/);
+  return (fields.length === 5 || fields.length === 6) && fields.every((f) => /^[\d*,\-/?LW#A-Za-z]+$/.test(f));
+}
+
+function browserTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+/**
+ * The trigger as ISC accepts it. A SCHEDULED trigger gets id, a trimmed
+ * cronString, a frequency ISC accepts (an invalid or missing one becomes
+ * cronSchedule) and a timeZone (the browser's when none is given);
+ * integrationId is filled with null as ISC itself stores it. Other trigger
+ * types pass through unchanged. Never throws; validateWorkflow reports a
+ * missing cronString.
+ */
+export function normalizeTrigger(trigger) {
+  if (!isScheduledTrigger(trigger)) return trigger;
+  const attributes = { ...(trigger.attributes || {}) };
+  attributes.id = SCHEDULED_TRIGGER_ID;
+  if (typeof attributes.cronString === "string") attributes.cronString = attributes.cronString.trim();
+  const companions = FREQUENCY_COMPANIONS[attributes.frequency];
+  const frequencyUsable = attributes.frequency === CRON_FREQUENCY
+    || (companions && companions.every((k) => Array.isArray(attributes[k]) && attributes[k].length > 0));
+  if (!frequencyUsable) {
+    attributes.frequency = CRON_FREQUENCY;
+    for (const keys of Object.values(FREQUENCY_COMPANIONS)) for (const k of keys) delete attributes[k];
+  }
+  if (typeof attributes.timeZone !== "string" || !attributes.timeZone.trim()) attributes.timeZone = browserTimeZone();
+  if (!("integrationId" in attributes)) attributes.integrationId = null;
+  return { ...trigger, type: "SCHEDULED", attributes };
+}
+
 /**
  * Structural problems with a workflow (empty = safe to send to ISC). Not a
  * semantic check — ISC does that on create and on enable — but it catches a
@@ -234,6 +293,9 @@ export function validateWorkflow(workflow, catalog) {
   if (!trigger?.type) problems.push("trigger.type is missing.");
   if (!libTrigger) problems.push(`trigger.attributes.id "${trigger?.attributes?.id}" is not a trigger in the library (the trigger's library id goes in trigger.attributes.id).`);
   else if (trigger.type && libTrigger.type && trigger.type !== libTrigger.type) problems.push(`trigger.type is "${trigger.type}" but the library says ${libTrigger.id} is type "${libTrigger.type}".`);
+  if (isScheduledTrigger(trigger) && !isCronString(trigger.attributes?.cronString)) {
+    problems.push(`A SCHEDULED trigger needs attributes.cronString, a 5-field cron expression such as "0 8 * * *" (minute hour day-of-month month day-of-week); it is ${trigger.attributes?.cronString === undefined ? "missing" : JSON.stringify(trigger.attributes.cronString)}.`);
+  }
 
   const def = workflow.definition;
   const steps = def?.steps && typeof def.steps === "object" ? def.steps : null;

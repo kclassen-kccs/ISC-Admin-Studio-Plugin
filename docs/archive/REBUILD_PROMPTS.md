@@ -1,5 +1,7 @@
 # Rebuilding Admin Studio: a prompt sequence
 
+> **Archived.** This prompt sequence describes rebuilding the earlier standalone app (Express proxy, OAuth sign-in, Railway and Vercel, iOS). The ISC constraints in Phase 0 still hold; Phases 1, 8 and the native build do not apply to the plugin, whose architecture is in [../ARCHITECTURE.md](../ARCHITECTURE.md).
+
 Derived from the app as it stands — 37 pages, 18 shared components, 139 server
 routes, ~183 client API functions, ~34k lines. Each numbered item is a prompt
 you could actually type; the order matters, because later ones depend on
